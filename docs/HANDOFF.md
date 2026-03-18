@@ -21,6 +21,7 @@ interact with the intended flow before integrating a real photo-analysis backend
 - tightened the browser smoke to prove a phone-sized viewport and sticky mobile hotbar actions
 - added repo-local operations packets for architecture, QA, security, backlog, and release
 - created a public GitHub repo and static GitHub Pages preview for testing
+- switched GitHub Pages to workflow publishing and protected the working branch with required `CI`, no force-pushes, and no branch deletion
 - added official-source Minecraft product notes to keep the theme direction grounded in modern Bedrock block families
 - isolated the reconstruction logic in `src/lib/generateBuildPlan.ts` so it can be
   swapped for a real analysis pipeline later without rewriting the UI shell
@@ -32,7 +33,7 @@ interact with the intended flow before integrating a real photo-analysis backend
 - support saving projects and generating richer voxel outputs
 - add broader browser smoke coverage for upload failures, long analysis states, and export variants
 - convert the analyzer boundary from synchronous local mock execution to a service-ready async path
-- enforce branch protection and required status checks now that CI/Pages workflows exist in GitHub
+- decide when to add PR review requirements on top of the current lightweight branch protection baseline
 
 ## Risks and blockers
 

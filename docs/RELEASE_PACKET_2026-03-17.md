@@ -45,6 +45,7 @@
 - Security gate for static-preview release: `PASS`
 - Security gate for backend or data-sensitive release readiness: `BLOCKED` (future upload/storage/vendor work still ungated)
 - Approval gate (owner request for static preview): `PASS`
+- Branch protection baseline: `PASS` (`CI` required, force-push disabled, branch deletion disabled)
 - Rollback clarity: `PASS`
 
 ## Risks
