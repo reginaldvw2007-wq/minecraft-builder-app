@@ -23,6 +23,11 @@ npm run smoke:browser
 Open the local Vite URL shown in the terminal. The app ships with a demo reference set,
 and you can replace it by uploading your own images.
 
+## Live Links
+
+- GitHub repo: [reginaldvw2007-wq/minecraft-builder-app](https://github.com/reginaldvw2007-wq/minecraft-builder-app)
+- Public test app: [GitHub Pages preview](https://reginaldvw2007-wq.github.io/minecraft-builder-app/)
+
 ## Current scope
 
 - React + TypeScript single-page prototype

@@ -57,6 +57,7 @@ production hosting or vendor lock-in.
   - baseline commit or tag exists
   - QA and security evidence are attached
   - rollback target is documented
+  - static preview is live without introducing backend or storage risk
 
 ## Recommended Next Tickets
 

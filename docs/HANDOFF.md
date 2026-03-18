@@ -19,6 +19,7 @@ interact with the intended flow before integrating a real photo-analysis backend
 - extracted a provider-neutral mock analyzer entrypoint for the UI
 - added upload validation guardrails and repeatable browser smoke automation
 - added repo-local operations packets for architecture, QA, security, backlog, and release
+- created a public GitHub repo and static GitHub Pages preview for testing
 - isolated the reconstruction logic in `src/lib/generateBuildPlan.ts` so it can be
   swapped for a real analysis pipeline later without rewriting the UI shell
 
@@ -29,6 +30,7 @@ interact with the intended flow before integrating a real photo-analysis backend
 - support saving projects and generating richer voxel outputs
 - add broader browser smoke coverage for mobile layouts and edge-case uploads
 - convert the analyzer boundary from synchronous local mock execution to a service-ready async path
+- refresh GitHub auth with `workflow` scope so local workflow files can be pushed and CI/Pages can be automated from source
 
 ## Risks and blockers
 
@@ -44,6 +46,11 @@ interact with the intended flow before integrating a real photo-analysis backend
 - `npm run build`
 - `npm run lint`
 - `npm run smoke:browser`
+
+## External Links
+
+- GitHub repo: `https://github.com/reginaldvw2007-wq/minecraft-builder-app`
+- Public test app: `https://reginaldvw2007-wq.github.io/minecraft-builder-app/`
 
 ## Recommended next ticket
 

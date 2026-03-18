@@ -2,16 +2,17 @@
 
 ## Verdict
 
-- Decision: `GO (local-only prototype)`
-- Release type reviewed: preview candidate for the local prototype
+- Decision: `GO (public static mock preview)`
+- Release type reviewed: preview candidate for the public static prototype
 - Reviewer role: `Release Manager`
-- Decision timestamp: `2026-03-18 00:09:36 PDT`
+- Decision timestamp: `2026-03-18 06:48:00 PDT`
 
 ## Scope Reviewed
 
 - React + TypeScript + Vite prototype in `mine craft builder app`
 - Product surface: multi-photo intake, mock reconstruction summary, voxel layer preview, material estimation, staged build instructions
-- Not in scope: backend services, cloud storage, auth, production hosting
+- Deployment surface: static GitHub Pages preview at `https://reginaldvw2007-wq.github.io/minecraft-builder-app/`
+- Not in scope: backend services, cloud storage, auth, external model providers
 
 ## Change Summary
 
@@ -40,9 +41,9 @@
 
 - Change evidence completeness: `PASS` (basic code/test commands captured)
 - QA gate for local prototype review: `PASS`
-- Security gate for local-only prototype review: `PASS`
-- Security gate for sensitive/public release readiness: `BLOCKED` (future upload/storage/vendor work still ungated)
-- Approval gate (owner/board for public or data-sensitive release): `BLOCKED` (no approval record attached)
+- Security gate for static-preview release: `PASS`
+- Security gate for backend or data-sensitive release readiness: `BLOCKED` (future upload/storage/vendor work still ungated)
+- Approval gate (owner request for static preview): `PASS`
 - Rollback clarity: `PASS`
 
 ## Risks
@@ -51,8 +52,10 @@
   - Browser smoke coverage is still narrow and focused on a small local upload set plus export
   - Mobile-specific presentation and larger edge-case uploads still need dedicated checks
 - Security/process risk:
-  - Governance requires explicit review evidence before sensitive/public expansion
-  - The current security review is valid only while the app remains local-only
+  - Governance requires explicit review evidence before backend or data-sensitive expansion
+  - The current security review is valid only while the public app remains static and client-only
+- Delivery risk:
+  - The GitHub repo token currently lacks `workflow` scope, so source-controlled CI workflows are ready locally but not yet pushed to origin
 
 ## Rollback Notes (Current State)
 
@@ -62,10 +65,13 @@
   1. `git checkout local-prototype-2026-03-18`
   2. `npm install`
   3. `npm run test && npm run build`
+- Public preview rollback:
+  1. push a prior static build to `gh-pages`, or
+  2. disable GitHub Pages for the repo if the preview must be removed immediately
 
 ## Required Before Re-Review
 
 1. Add upload-flow smoke coverage beyond the demo/export path.
-2. Add deployment target + exact rollback runbook (commands + owner) before any shared preview.
-3. Record owner/board approval for any public or shared deployment request.
-4. Re-run security review once uploads, storage, or external providers exist.
+2. Refresh GitHub auth with `workflow` scope and push the CI / Pages workflows to origin.
+3. Add deployment target + exact rollback runbook (commands + owner) before any backend or data-sensitive release.
+4. Re-run security review once uploads, storage, auth, or external providers exist.

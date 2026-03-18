@@ -2,8 +2,8 @@
 
 ## Current Recommendation
 
-Current status remains `NO-GO` for any shared or public preview until the following
-items are satisfied.
+Current status is `GO` for the static mock preview and `NO-GO` for any release that
+adds backend processing, storage, auth, or external model vendors.
 
 ## Minimum Preconditions
 
