@@ -17,6 +17,7 @@ Evidence anchors:
 Current posture:
 
 - client-only application
+- static public preview on GitHub Pages
 - no backend, auth, analytics, or persistent storage
 - uploaded files stay in browser memory via object URLs during the current session
 - exports are explicitly user-initiated downloads
@@ -34,12 +35,15 @@ Current posture:
    - untrusted input enters through `input type="file"`
 2. Browser memory -> local rendering/export pipeline
    - image previews and derived plan data are displayed and serialized
-3. Local repo -> Paperclip governance
+3. Public browser -> static GitHub Pages hosting
+   - untrusted visitors can load the frontend bundle, but no server-side app logic exists
+4. Local repo -> Paperclip governance
    - organizational decisions and release gates live outside the runtime code
 
 ## Present-Day Risk Notes
 
 - there is no server-side upload surface yet, which removes many current remote risks
+- the public preview exposes the UI bundle and copy, but not a server-side processing path
 - the main active risk is misleading operators into believing the output is image-accurate
 - large or malformed images could still stress the local browser session
 

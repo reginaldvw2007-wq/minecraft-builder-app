@@ -41,6 +41,8 @@ Budget allocation:
 - Name: `Phase 1 Foundation`
 - Project route: `/MIN/projects/phase-1-foundation`
 - Local workspace: `/Users/Reggie/Documents/New project/mine craft builder app`
+- GitHub repo: `https://github.com/reginaldvw2007-wq/minecraft-builder-app`
+- Public static preview: `https://reginaldvw2007-wq.github.io/minecraft-builder-app/`
 
 ## Starter Issues
 
@@ -55,6 +57,7 @@ Budget allocation:
 
 - optionally invite an OpenClaw operator later for bounded browser/manual operations
 - review the first heartbeat results and adjust budgets if a specific role is too constrained
+- refresh GitHub auth with `workflow` scope so repo workflows can be pushed to origin and branch protection can rely on CI
 
 ## Issue Artifact Map
 
