@@ -58,7 +58,7 @@ Budget allocation:
 
 - optionally invite an OpenClaw operator later for bounded browser/manual operations
 - review the first heartbeat results and adjust budgets if a specific role is too constrained
-- apply branch protection and required CI checks on the working branch now that repo workflows exist in GitHub
+- decide when to escalate from the current lightweight protection baseline to PR-review requirements
 
 ## Issue Artifact Map
 
