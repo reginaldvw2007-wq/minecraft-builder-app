@@ -22,6 +22,7 @@
   - `src/lib/generateBuildPlan.ts`
   - `src/App.css`
   - `src/index.css`
+- Phone-first presentation now has explicit mobile smoke evidence and stronger Minecraft theme language grounded in official block-family references.
 
 ## Verification Evidence
 
@@ -50,12 +51,10 @@
 
 - Quality risk:
   - Browser smoke coverage is still narrow and focused on a small local upload set plus export
-  - Mobile-specific presentation and larger edge-case uploads still need dedicated checks
+  - Larger edge-case uploads and long-running analysis states still need dedicated checks
 - Security/process risk:
   - Governance requires explicit review evidence before backend or data-sensitive expansion
   - The current security review is valid only while the public app remains static and client-only
-- Delivery risk:
-  - The GitHub repo token currently lacks `workflow` scope, so source-controlled CI workflows are ready locally but not yet pushed to origin
 
 ## Rollback Notes (Current State)
 
@@ -72,6 +71,5 @@
 ## Required Before Re-Review
 
 1. Add upload-flow smoke coverage beyond the demo/export path.
-2. Refresh GitHub auth with `workflow` scope and push the CI / Pages workflows to origin.
-3. Add deployment target + exact rollback runbook (commands + owner) before any backend or data-sensitive release.
-4. Re-run security review once uploads, storage, auth, or external providers exist.
+2. Add deployment target + exact rollback runbook (commands + owner) before any backend or data-sensitive release.
+3. Re-run security review once uploads, storage, auth, or external providers exist.

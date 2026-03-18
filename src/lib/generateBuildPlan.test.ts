@@ -47,6 +47,7 @@ describe('buildPlanFromSources', () => {
 
     expect(plan.structureName).toContain('Warehouse')
     expect(plan.summary).toContain('reference photos')
+    expect(plan.themeProfile.tags.length).toBeGreaterThan(0)
   })
 })
 
@@ -68,7 +69,9 @@ describe('build plan exports', () => {
     expect(json).toContain('"exportVersion": 1')
     expect(json).toContain('"mode": "mock-prototype"')
     expect(json).toContain('"structureName": "Warehouse Concept"')
+    expect(json).toContain('"themeProfile"')
     expect(markdown).toContain('# Warehouse Concept')
+    expect(markdown).toContain('## Kit Profile')
     expect(markdown).toContain('## Material Pack')
     expect(markdown).toContain('## Build Stages')
     expect(markdown).toContain('warehouse-front.jpg')

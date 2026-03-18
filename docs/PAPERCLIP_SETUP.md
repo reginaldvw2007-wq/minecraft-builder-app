@@ -14,6 +14,7 @@ Canonical company bootstrap package:
 
 - `/Users/Reggie/Documents/ai-ops/paperclip/companies/minecraft-builder-ops/COMPANY.md`
 - `/Users/Reggie/Documents/ai-ops/paperclip/companies/minecraft-builder-ops/paperclip.manifest.json`
+- `/Users/Reggie/Documents/ai-ops/paperclip/companies/minecraft-builder-ops/policies/agent-execution-sop.md`
 - `/Users/Reggie/Documents/ai-ops/paperclip/companies/minecraft-builder-ops/policies/operating-rules.md`
 - `/Users/Reggie/Documents/ai-ops/paperclip/companies/minecraft-builder-ops/policies/security-gates.md`
 - `/Users/Reggie/Documents/ai-ops/paperclip/companies/minecraft-builder-ops/projects/phase1-foundation.md`
@@ -57,7 +58,7 @@ Budget allocation:
 
 - optionally invite an OpenClaw operator later for bounded browser/manual operations
 - review the first heartbeat results and adjust budgets if a specific role is too constrained
-- refresh GitHub auth with `workflow` scope so repo workflows can be pushed to origin and branch protection can rely on CI
+- apply branch protection and required CI checks on the working branch now that repo workflows exist in GitHub
 
 ## Issue Artifact Map
 

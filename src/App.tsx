@@ -25,6 +25,7 @@ import {
 const INITIAL_SOURCES = createDemoSources()
 const INITIAL_ANALYSIS = analyzeStructure({ sources: INITIAL_SOURCES })
 const INITIAL_PLAN = INITIAL_ANALYSIS.plan
+const UPLOAD_INPUT_ID = 'reference-upload-input'
 
 const FILE_PREVIEW_TONES = [
   'linear-gradient(135deg, #49626d 0%, #d6b17a 100%)',
@@ -103,6 +104,41 @@ function App() {
     plan.layers.find((layer) => layer.id === activeLayerId) ?? plan.layers[0]
   const usingDemo = sources.every((source) => source.isDemo)
   const totalReferenceSize = sources.reduce((sum, source) => sum + source.sizeBytes, 0)
+  const totalStacks = Math.ceil(plan.totalBlocks / 64)
+  const hudCards = [
+    {
+      label: 'Mode',
+      value: 'Bedrock mobile',
+      detail: 'Sized for one-thumb browsing, quick scout notes, and touch-friendly follow-through.',
+    },
+    {
+      label: 'Kit',
+      value: plan.theme,
+      detail: 'Modern Minecraft block family picked for the concept pass.',
+    },
+    {
+      label: 'Stacks',
+      value: `${totalStacks}`,
+      detail: 'Rough full-stack count before micro detailing.',
+    },
+  ]
+  const profileCards = [
+    {
+      label: 'Biome fit',
+      value: plan.themeProfile.biome,
+      detail: plan.themeProfile.vibe,
+    },
+    {
+      label: 'Build lane',
+      value: plan.themeProfile.playstyle,
+      detail: 'Where this kit feels most natural in a real survival or creative world.',
+    },
+    {
+      label: 'Phone pass',
+      value: 'Touch-first build loop',
+      detail: plan.themeProfile.mobileHint,
+    },
+  ]
 
   function replaceSources(nextSources: SourceImage[]) {
     setSources(nextSources)
@@ -157,25 +193,52 @@ function App() {
 
   return (
     <div className="app-shell">
+      <input
+        className="shared-upload-input"
+        data-testid="reference-upload-input"
+        id={UPLOAD_INPUT_ID}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileSelection}
+      />
+
       <header className="hero-panel">
         <div className="hero-copy">
-          <p className="eyebrow">Engineering Ticket 001</p>
-          <h1>Photo-to-voxel builder prototype</h1>
+          <p className="eyebrow">Pocket Build Ticket 001</p>
+          <h1>Snap a build. Get the block plan.</h1>
           <p className="hero-summary">
-            Upload several reference photos of a real structure and this local prototype
-            will sketch a rough Minecraft footprint, material pack, and build order.
+            Built for Bedrock-style builders on phone first: load a few photos, rough in
+            the shell, and carry a Minecraft-ready block plan back into your hotbar.
           </p>
           <p className="hero-summary hero-summary--secondary">{plan.summary}</p>
+          <p className="hero-note">
+            Cherry groves, bamboo mosaics, tuff foundries, pale garden builds, mangrove
+            docks, and other modern block kits all feed the visual direction of the mock
+            pass.
+          </p>
+
+          <div className="hud-strip">
+            {hudCards.map((card) => (
+              <article key={card.label} className="hud-card">
+                <p>{card.label}</p>
+                <strong>{card.value}</strong>
+                <span>{card.detail}</span>
+              </article>
+            ))}
+          </div>
+
+          <div className="kit-tag-row" aria-label="Theme kit tags">
+            {plan.themeProfile.tags.map((tag) => (
+              <span key={tag} className="kit-tag">
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="hero-actions">
-          <label className="upload-button">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileSelection}
-            />
+          <label className="upload-button" htmlFor={UPLOAD_INPUT_ID}>
             Load reference photos
           </label>
           <p className="status-note">
@@ -216,7 +279,7 @@ function App() {
         <section className="panel intake-panel">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Input set</p>
+              <p className="section-kicker">Scout pack</p>
               <h2>Reference capture</h2>
             </div>
             <p className="section-meta">
@@ -254,24 +317,24 @@ function App() {
 
           <div className="pipeline-strip">
             <article className="pipeline-card">
-              <p className="pipeline-step">01 Intake</p>
+              <p className="pipeline-step">01 Scout</p>
               <strong>Reference alignment</strong>
-              <p>Normalize multiple views so facade, depth, and roof clues can agree.</p>
+              <p>Line up facade, side, and roof clues like a fast Bedrock field pass.</p>
             </article>
             <article className="pipeline-card">
-              <p className="pipeline-step">02 Massing</p>
+              <p className="pipeline-step">02 Mass</p>
               <strong>Silhouette inference</strong>
-              <p>Estimate footprint, floor bands, and the likely roof profile.</p>
+              <p>Guess the footprint, floor bands, and skyline before counting blocks.</p>
             </article>
             <article className="pipeline-card">
-              <p className="pipeline-step">03 Voxel pass</p>
+              <p className="pipeline-step">03 Chunk</p>
               <strong>Layer rough-in</strong>
-              <p>Convert the inferred form into layer slices sized for Minecraft blocks.</p>
+              <p>Turn the mass into chunk-friendly slice maps sized for Minecraft blocks.</p>
             </article>
             <article className="pipeline-card">
-              <p className="pipeline-step">04 Guide</p>
+              <p className="pipeline-step">04 Craft</p>
               <strong>Build sequence</strong>
-              <p>Package material totals and stage the build into fast, readable steps.</p>
+              <p>Package material stacks, palette picks, and a phone-friendly build order.</p>
             </article>
           </div>
         </section>
@@ -279,7 +342,7 @@ function App() {
         <section className="panel overview-panel">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Reconstruction readout</p>
+              <p className="section-kicker">Overworld readout</p>
               <h2>Project snapshot</h2>
             </div>
             <div className="chip-row">
@@ -292,26 +355,26 @@ function App() {
 
           <div className="metric-grid">
             <article className="metric-card">
-              <span className="metric-label">Structure</span>
+              <span className="metric-label">Build ID</span>
               <strong>{plan.structureName}</strong>
               <p>{plan.theme}</p>
             </article>
             <article className="metric-card">
-              <span className="metric-label">Dimensions</span>
+              <span className="metric-label">Footprint</span>
               <strong>
                 {plan.dimensions.width} x {plan.dimensions.depth} x {plan.dimensions.height}
               </strong>
               <p>{plan.dimensions.floors} floor bands inferred</p>
             </article>
             <article className="metric-card">
-              <span className="metric-label">Materials</span>
+              <span className="metric-label">Hotbar Lead</span>
               <strong>{plan.dominantMaterial}</strong>
-              <p>{plan.totalBlocks.toLocaleString()} total blocks estimated</p>
+              <p>{totalStacks} stacks across {plan.totalBlocks.toLocaleString()} blocks</p>
             </article>
             <article className="metric-card">
-              <span className="metric-label">Roofline</span>
+              <span className="metric-label">Skyline</span>
               <strong>{plan.roofline}</strong>
-              <p>Current concept favors a centered silhouette read</p>
+              <p>Current concept favors a silhouette that reads cleanly from spawn.</p>
             </article>
           </div>
 
@@ -321,6 +384,16 @@ function App() {
                 <p className="insight-label">{insight.label}</p>
                 <strong>{insight.value}</strong>
                 <p>{insight.detail}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="theme-profile-grid">
+            {profileCards.map((card) => (
+              <article key={card.label} className="theme-profile-card">
+                <p className="insight-label">{card.label}</p>
+                <strong>{card.value}</strong>
+                <p>{card.detail}</p>
               </article>
             ))}
           </div>
@@ -347,11 +420,11 @@ function App() {
         <section className="panel layers-panel">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Voxel model</p>
+              <p className="section-kicker">Chunk slices</p>
               <h2>Layer slices and skyline</h2>
             </div>
             <p className="section-meta">
-              Rough preview only, intended for fast iteration before full generation
+              Rough chunk preview only, tuned for fast iteration before a full generator
             </p>
           </div>
 
@@ -399,12 +472,25 @@ function App() {
         <section className="panel guide-panel">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Build handoff</p>
+              <p className="section-kicker">Pocket build guide</p>
               <h2>Material pack and step order</h2>
             </div>
             <p className="section-meta">
-              Staged for a player who wants a rough but buildable Minecraft version
+              Staged for a player who wants a rough but phone-friendly Minecraft build pass
             </p>
+          </div>
+
+          <div className="hotbar-panel">
+            <p className="section-kicker">Hotbar loadout</p>
+            <div className="hotbar-strip">
+              {plan.palette.map((material) => (
+                <article key={material.block} className={`hotbar-slot tone-${material.tone}`}>
+                  <span>{Math.ceil(material.amount / 64)} stacks</span>
+                  <strong>{material.block}</strong>
+                  <p>{material.purpose}</p>
+                </article>
+              ))}
+            </div>
           </div>
 
           <div className="material-grid">
@@ -439,6 +525,21 @@ function App() {
           </div>
         </section>
       </main>
+
+      <div className="mobile-hotbar" aria-label="Pocket hotbar actions">
+        <label className="mobile-hotbar__slot mobile-hotbar__slot--primary" htmlFor={UPLOAD_INPUT_ID}>
+          Upload
+        </label>
+        <button type="button" className="mobile-hotbar__slot" onClick={loadDemoSet}>
+          Demo
+        </button>
+        <button type="button" className="mobile-hotbar__slot" onClick={exportJson}>
+          JSON
+        </button>
+        <button type="button" className="mobile-hotbar__slot" onClick={exportMarkdown}>
+          Guide
+        </button>
+      </div>
     </div>
   )
 }

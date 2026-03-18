@@ -95,6 +95,7 @@ export function buildPlanToMarkdown(
     .join('\n')
 
   const sourceNoteLines = plan.sourceNotes.map((note) => `- ${note}`).join('\n')
+  const tagLine = plan.themeProfile.tags.join(', ')
 
   return `# ${plan.structureName}
 
@@ -122,6 +123,14 @@ ${sourceLines}
 ## Insights
 
 ${insightLines}
+
+## Kit Profile
+
+- Biome cue: ${plan.themeProfile.biome}
+- Build vibe: ${plan.themeProfile.vibe}
+- Playstyle: ${plan.themeProfile.playstyle}
+- Mobile hint: ${plan.themeProfile.mobileHint}
+- Tags: ${tagLine}
 
 ## Material Pack
 

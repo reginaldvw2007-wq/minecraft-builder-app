@@ -46,9 +46,18 @@ export type BuildStage = {
   materials: string
 }
 
+export type ThemeProfile = {
+  biome: string
+  vibe: string
+  playstyle: string
+  mobileHint: string
+  tags: string[]
+}
+
 export type BuildPlan = {
   structureName: string
   theme: string
+  themeProfile: ThemeProfile
   roofline: string
   summary: string
   confidence: number
@@ -68,7 +77,7 @@ export type BuildPlan = {
   skyline: number[]
 }
 
-type Theme = {
+type Theme = ThemeProfile & {
   theme: string
   primary: string
   support: string
@@ -79,44 +88,88 @@ type Theme = {
 
 const THEMES: Theme[] = [
   {
-    theme: 'Harbor Workshop',
-    primary: 'Stone Bricks',
-    support: 'Stripped Oak',
-    roof: 'Dark Prismarine Stairs',
-    detail: 'Warped Trapdoors',
-    light: 'Lanterns',
-  },
-  {
-    theme: 'Hilltop Lodge',
-    primary: 'Spruce Planks',
-    support: 'Cobblestone',
+    theme: 'Cherry Grove Chalet',
+    primary: 'Cherry Planks',
+    support: 'Stripped Birch Logs',
     roof: 'Dark Oak Stairs',
-    detail: 'Campfire Chimney',
-    light: 'Soul Lanterns',
+    detail: 'Cherry Trapdoors',
+    light: 'Lanterns',
+    biome: 'Cherry Grove',
+    vibe: 'Soft mountain chalet with pink-petal trim and an easy survival silhouette.',
+    playstyle: 'Best for scenic family bases, overlook cabins, and cozy starter towns.',
+    mobileHint:
+      'Keep the roof pass broad first, then finish petals and trapdoors once the shell already reads well on a phone.',
+    tags: ['Cherry wood', 'Pink petals', 'Mountain meadow'],
   },
   {
-    theme: 'Quarry Hall',
+    theme: 'Copper Tuff Atelier',
     primary: 'Tuff Bricks',
-    support: 'Polished Andesite',
-    roof: 'Deepslate Tiles',
-    detail: 'Iron Bars',
-    light: 'Glowstone',
+    support: 'Polished Tuff',
+    roof: 'Waxed Oxidized Cut Copper Stairs',
+    detail: 'Copper Bulbs',
+    light: 'Lanterns',
+    biome: 'Trial Chamber',
+    vibe: 'Mid-game workshop kit built around the copper-and-tuff language of trial chambers.',
+    playstyle: 'Fits forge halls, redstone shops, vault rooms, and industrial overworld builds.',
+    mobileHint:
+      'Use tuff and copper as the first shell pass so touch edits stay legible while you refine corners and lights later.',
+    tags: ['Tuff bricks', 'Copper bulbs', 'Dungeon workshop'],
   },
   {
-    theme: 'Market Annex',
-    primary: 'Mud Bricks',
-    support: 'Mangrove Planks',
-    roof: 'Red Nether Brick Stairs',
-    detail: 'Acacia Trapdoors',
-    light: 'Chains and Lanterns',
+    theme: 'Bamboo Mosaic Loft',
+    primary: 'Bamboo Mosaic',
+    support: 'Stripped Bamboo Blocks',
+    roof: 'Dark Prismarine Stairs',
+    detail: 'Bamboo Trapdoors',
+    light: 'Pearlescent Froglights',
+    biome: 'Bamboo Jungle',
+    vibe: 'Airy loft with slatted floors, warm lantern glow, and a fast tropical read.',
+    playstyle: 'Great for cliff homes, jungle walkways, breezy towers, and raft-side bases.',
+    mobileHint:
+      'Repeat mosaic stairs and trapdoors in bands so the build guide stays readable on a narrow screen.',
+    tags: ['Bamboo mosaic', 'Raft dock', 'Froglight glow'],
   },
   {
-    theme: 'Sunwashed Villa',
-    primary: 'Smooth Sandstone',
-    support: 'Cut Sandstone',
-    roof: 'Orange Terracotta',
-    detail: 'Birch Trapdoors',
-    light: 'Sea Lanterns',
+    theme: 'Mangrove Dockhouse',
+    primary: 'Mangrove Planks',
+    support: 'Mud Bricks',
+    roof: 'Mangrove Stairs',
+    detail: 'Mangrove Trapdoors',
+    light: 'Ochre Froglights',
+    biome: 'Mangrove Swamp',
+    vibe: 'Waterline dockhouse with muddy footing, warm planks, and a survival harbor feel.',
+    playstyle: 'Strong for fishing ports, villager docks, and lowland survival hubs.',
+    mobileHint:
+      'Lock the dock posts and perimeter first so short phone sessions can pause without losing the footprint.',
+    tags: ['Mangrove', 'Mud bricks', 'Harbor'],
+  },
+  {
+    theme: 'Pale Garden Manor',
+    primary: 'Pale Oak Planks',
+    support: 'Stone Bricks',
+    roof: 'Deepslate Tile Stairs',
+    detail: 'Pale Oak Trapdoors',
+    light: 'Lanterns',
+    biome: 'Pale Garden',
+    vibe: 'Quiet pale-oak manor with mossy accents and a moody exploration vibe.',
+    playstyle: 'Ideal for eerie landmarks, mansion builds, and overworld adventure hubs.',
+    mobileHint:
+      'Save moss and hanging detail for the last pass so the main silhouette remains clean during phone-first building.',
+    tags: ['Pale oak', 'Pale moss', 'Garden manor'],
+  },
+  {
+    theme: 'Deep Tuff Watchtower',
+    primary: 'Tuff Bricks',
+    support: 'Cobbled Deepslate',
+    roof: 'Polished Tuff Stairs',
+    detail: 'Chiseled Tuff',
+    light: 'Copper Bulbs',
+    biome: 'Deep Slate Edge',
+    vibe: 'Tall lookout with carved tuff ribs, copper lamps, and a strong spawn-facing silhouette.',
+    playstyle: 'Works for spawn towers, map rooms, village watch posts, and cliff sentries.',
+    mobileHint:
+      'Stack repeated floor bands so the guide can be followed one thumb-scroll at a time.',
+    tags: ['Chiseled tuff', 'Copper bulbs', 'Watchtower'],
   },
 ]
 
@@ -448,22 +501,22 @@ export function buildPlanFromSources(inputSources: SourceImage[]): BuildPlan {
     {
       label: 'Footprint',
       value: `${width} x ${depth} blocks`,
-      detail: 'Pad size before landscaping or walkways.',
+      detail: 'Chunk-ready pad size before paths, farms, or terrain dressing.',
     },
     {
-      label: 'Vertical read',
+      label: 'Stack height',
       value: `${height} blocks tall`,
-      detail: `${floors} interpreted floor band${floors > 1 ? 's' : ''}.`,
+      detail: `${floors} interpreted floor band${floors > 1 ? 's' : ''} for the shell pass.`,
     },
     {
-      label: 'Roof guess',
+      label: 'Roofline',
       value: roofline,
-      detail: 'Chosen from silhouette agreement across the reference set.',
+      detail: 'Picked from the skyline read across the reference pack.',
     },
     {
-      label: 'Theme',
+      label: 'Block kit',
       value: theme.theme,
-      detail: `Material package anchored by ${theme.primary.toLowerCase()}.`,
+      detail: `Palette anchored by ${theme.primary.toLowerCase()} and companion detail blocks.`,
     },
   ]
 
@@ -473,48 +526,48 @@ export function buildPlanFromSources(inputSources: SourceImage[]): BuildPlan {
 
   const stages: BuildStage[] = [
     {
-      title: 'Mark the pad',
+      title: 'Stake the chunk',
       window: 'Layers 0-1',
       goal: `Clear a ${width + 4} x ${depth + 4} site and center the build pad.`,
       checklist: [
         `Lay the ${width} x ${depth} footprint with ${theme.support}.`,
-        'Mark each corner with a 2 x 2 anchor so the silhouette stays true.',
+        'Mark each corner with a 2 x 2 anchor so the shell reads cleanly from spawn.',
         'Leave the centered front opening clear before lifting the facade.',
       ],
       output: 'Foundation ring and anchor points are locked in.',
       materials: `${theme.support}, ${theme.primary}`,
     },
     {
-      title: 'Raise the shell',
+      title: 'Lift the shell',
       window: `Layers 2-${Math.max(4, Math.round(height * 0.45))}`,
-      goal: 'Build the perimeter walls first so the massing reads from a distance.',
+      goal: 'Build the perimeter walls first so the silhouette lands before details.',
       checklist: [
         `Run the outer shell in ${theme.primary}.`,
-        'Keep the entry notch open and mirror the long wall rhythm on both sides.',
+        'Keep the entry notch open and mirror the wall rhythm on both sides.',
         'Drop interior posts where the foundation grid shows support columns.',
       ],
       output: 'Doorway, wall thickness, and first floor volume are visible.',
       materials: `${theme.primary}, ${theme.support}`,
     },
     {
-      title: 'Shape the upper band',
+      title: 'Dress the facade',
       window: `Layers ${Math.max(5, Math.round(height * 0.5))}-${Math.max(
         7,
         Math.round(height * 0.78),
       )}`,
-      goal: 'Use the upper shell pass to establish windows, trim, and vertical rhythm.',
+      goal: 'Use the upper shell pass to set windows, trim, and a cleaner build rhythm.',
       checklist: [
         `Add trim breaks with ${theme.detail}.`,
         'Reserve the center spine for stair, loft, or lookout access.',
-        'Treat empty cells on the slice map as window or open-air breaks.',
+        'Treat empty cells on the slice map as windows, awnings, or open-air breaks.',
       ],
       output: 'The structure reads as intentional rather than a plain box.',
       materials: `${theme.detail}, ${theme.primary}`,
     },
     {
-      title: 'Cap and light',
+      title: 'Cap the skyline',
       window: `Layers ${Math.max(8, height - 2)}-${height}`,
-      goal: `Finish the ${roofline.toLowerCase()} roof and add navigation lighting.`,
+      goal: `Finish the ${roofline.toLowerCase()} roof and drop in guidance lighting.`,
       checklist: [
         `Cap the roof in ${theme.roof}.`,
         `Highlight the entrance and corners using ${theme.light}.`,
@@ -525,15 +578,20 @@ export function buildPlanFromSources(inputSources: SourceImage[]): BuildPlan {
     },
   ]
 
-  const summary = `Mock reconstruction from ${sources.length} reference photo${
+  const summary = `Pocket build pass from ${sources.length} reference photo${
     sources.length === 1 ? '' : 's'
-  } suggests a ${theme.theme.toLowerCase()} with a ${roofline.toLowerCase()} profile and a ${
-    width
-  } x ${depth} footprint.`
+  } suggests a ${theme.theme.toLowerCase()} rooted in ${theme.biome.toLowerCase()} cues, with a ${roofline.toLowerCase()} profile and a ${width} x ${depth} footprint for a fast Minecraft shell.`
 
   return {
     structureName,
     theme: theme.theme,
+    themeProfile: {
+      biome: theme.biome,
+      vibe: theme.vibe,
+      playstyle: theme.playstyle,
+      mobileHint: theme.mobileHint,
+      tags: theme.tags,
+    },
     roofline,
     summary,
     confidence,

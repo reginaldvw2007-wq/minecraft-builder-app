@@ -6,6 +6,7 @@ multiple structure photos into:
 - a rough voxel footprint
 - inferred dimensions and materials
 - a staged Minecraft build guide
+- a phone-first Bedrock-style workflow for scouting and building on mobile
 
 The current implementation is intentionally a mock reconstruction engine. It gives us a
 working product surface and a replaceable domain boundary before we wire in a real
@@ -41,6 +42,8 @@ and you can replace it by uploading your own images.
 - step-by-step build staging for Minecraft
 - unit tests around the generator and export path
 - repeatable browser smoke automation for upload and export
+- mobile-first UI tuned for narrow screens and sticky hotbar actions
+- theme kits grounded in current official Minecraft block families
 
 ## Architecture
 
@@ -50,6 +53,7 @@ and you can replace it by uploading your own images.
 - [`src/lib/validateSources.ts`](./src/lib/validateSources.ts): upload guardrails for image intake
 - [`src/App.css`](./src/App.css): prototype-specific component styling
 - [`src/index.css`](./src/index.css): global theme, typography, and page atmosphere
+- [`docs/MINECRAFT_PRODUCT_NOTES.md`](./docs/MINECRAFT_PRODUCT_NOTES.md): official-source product direction for Bedrock/mobile and current Minecraft block kits
 
 ## Recommended next tickets
 

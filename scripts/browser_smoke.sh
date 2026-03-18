@@ -51,8 +51,9 @@ if ! curl -fsS "${BASE_URL}" >/dev/null 2>&1; then
   exit 1
 fi
 
+"${PWCLI}" close-all >/dev/null 2>&1 || true
 "${PWCLI}" open "${BASE_URL}" >/dev/null
-UPLOAD_CODE="(async (page) => { await page.locator(\"input[type=\\\"file\\\"]\").setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.waitForTimeout(150); })"
+UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"reference-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByText(\"Using 2 uploaded photos for the current concept.\").waitFor({ timeout: 4000 }); })"
 "${PWCLI}" run-code "${UPLOAD_CODE}" >/dev/null
 SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
 SNAPSHOT_PATH="$(printf '%s\n' "${SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"
@@ -80,6 +81,8 @@ fi
 
 "${PWCLI}" click "${EXPORT_REF}" >/dev/null
 "${PWCLI}" snapshot >/dev/null
+SCROLL_TOP_CODE="(async (page) => { await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(100); })"
+"${PWCLI}" run-code "${SCROLL_TOP_CODE}" >/dev/null
 SCREENSHOT_OUTPUT="$("${PWCLI}" screenshot)"
 SCREENSHOT_PATH="$(printf '%s\n' "${SCREENSHOT_OUTPUT}" | sed -n 's/.*(\(.*\.png\)).*/\1/p' | tr -d '()' | tail -n 1)"
 

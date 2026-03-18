@@ -12,6 +12,9 @@ an agent-assisted product organization without losing reviewability or security.
 - every handoff should include objective, output, risks, and verification evidence
 - protected branches and required checks should guard the reviewable baseline
 - humans should remain explicit approvers for risky or public-facing changes
+- every task should be treated like a ticket with a named objective, deliverable, and handoff target
+- parallel work should split into isolated workstreams rather than mixing architecture, implementation, and release conclusions in one thread
+- only the tools needed for the current workflow should be activated; tool sprawl is not a virtue
 
 ## Working Model
 
@@ -42,6 +45,7 @@ Each ticket handoff should include:
 - objective
 - deliverable
 - owner
+- handoff target
 - prohibited actions
 - tests run
 - remaining work
@@ -69,6 +73,14 @@ Sources:
 Uploads, storage, auth, vendors, secrets, and deployment should not be treated as
 "just another ticket." They require a visible security/release path and usually a human
 approval step.
+
+### 6. Keep execution operationally clean
+
+- prefer isolated branches or worktrees when parallel implementation tracks would otherwise collide
+- use repo-specific configuration for durable behavior instead of relying on transient chat context
+- use repeatable skills and scripts before inventing new one-off workflows
+- automate only after a workflow is stable and predictable enough to trust
+- favor a working local prototype before scaling infrastructure or governance complexity
 
 ## Recommended Maturity Path
 
