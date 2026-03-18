@@ -22,6 +22,7 @@ Canonical company bootstrap package:
 ## Agents
 
 - `CEO / Product Owner` — `6635e56a-0dc0-4ede-9fa9-906c19a3849d`
+- `App Builder / Experience Owner` — proposed in repo package; pending board approval before live hire
 - `Architect / Vision Systems Lead` — `c0bfb805-5d2a-410c-bd24-59ad299adff4`
 - `Builder / Codex Executor` — `57c2bcc8-29e3-476f-b9ba-4102137d68c0`
 - `QA / Verification Reviewer` — `59d19c62-4af4-4dc0-a3c0-5f52594365fe`
@@ -31,6 +32,7 @@ Canonical company bootstrap package:
 Budget allocation:
 
 - CEO / Product Owner — `300` cents
+- App Builder / Experience Owner — `0` cents until board approval
 - Architect / Vision Systems Lead — `450` cents
 - Builder / Codex Executor — `900` cents
 - QA / Verification Reviewer — `300` cents
@@ -59,6 +61,7 @@ Budget allocation:
 - optionally invite an OpenClaw operator later for bounded browser/manual operations
 - review the first heartbeat results and adjust budgets if a specific role is too constrained
 - decide when to escalate from the current lightweight protection baseline to PR-review requirements
+- hire the proposed `App Builder / Experience Owner` role if you want UX/capture orchestration to become a live Paperclip responsibility
 
 ## Issue Artifact Map
 
@@ -68,3 +71,4 @@ Budget allocation:
 - `MIN-4` -> `docs/ANALYSIS_SERVICE_CONTRACT.md`
 - `MIN-5` -> `docs/VERIFICATION_CRITERIA.md`, `docs/QA_PACKET_2026-03-17.md`
 - `MIN-6` -> `docs/SECURITY_BASELINE.md`, `docs/SECURITY_REVIEW_2026-03-17.md`
+- `MIN-7` -> `docs/CAPTURE_FLOW_HANDOFF_2026-03-18.md`

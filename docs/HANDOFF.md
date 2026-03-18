@@ -23,6 +23,9 @@ interact with the intended flow before integrating a real photo-analysis backend
 - created a public GitHub repo and static GitHub Pages preview for testing
 - switched GitHub Pages to workflow publishing and protected the working branch with required `CI`, no force-pushes, and no branch deletion
 - added official-source Minecraft product notes to keep the theme direction grounded in modern Bedrock block families
+- replaced the dense first-run dashboard with a phone-first guided capture flow modeled after slot-based exterior photo tools
+- added an auto-render stage so 4 uploaded photos immediately produce visible progress and a clear next action into the build guide
+- documented a dedicated capture-flow handoff packet and proposed App Builder role for Paperclip governance
 - isolated the reconstruction logic in `src/lib/generateBuildPlan.ts` so it can be
   swapped for a real analysis pipeline later without rewriting the UI shell
 
@@ -34,6 +37,7 @@ interact with the intended flow before integrating a real photo-analysis backend
 - add broader browser smoke coverage for upload failures, long analysis states, and export variants
 - convert the analyzer boundary from synchronous local mock execution to a service-ready async path
 - decide when to add PR review requirements on top of the current lightweight branch protection baseline
+- decide whether to activate the proposed `App Builder / Experience Owner` role in the live Paperclip org
 
 ## Risks and blockers
 
