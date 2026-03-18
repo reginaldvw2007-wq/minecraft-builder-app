@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+:root {
+  --bg-deep: #07161a;
+  --bg-mid: #0f252b;
+  --bg-warm: #241711;
+  --panel-bg: rgba(13, 28, 33, 0.76);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-shadow: rgba(2, 8, 10, 0.42) 0 24px 70px -32px;
+  --ink: #f4efe3;
+  --muted: #c7c4b8;
+  --muted-strong: #e6c27e;
+  --accent: #b67a45;
+  --accent-strong: #d7ad67;
+  --accent-soft: #f0d598;
+  --sans: 'Space Grotesk', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  color: var(--ink);
+  font: 17px/1.55 var(--sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(215, 173, 103, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(120, 86, 53, 0.22), transparent 28%),
+    linear-gradient(180deg, var(--bg-mid), var(--bg-deep) 48%, #050d10 100%);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 85%);
+}
+
+#root {
+  width: min(1320px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 40px;
+}
+
+h1,
+h2,
+h3,
+strong {
+  color: var(--ink);
+}
+
+h1 {
+  margin: 14px 0;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+}
+
+h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.05;
+}
+
+h3 {
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+@media (max-width: 720px) {
+  :root {
+    font-size: 16px;
+  }
+
+  #root {
+    width: min(100% - 20px, 1320px);
+    padding-top: 14px;
+  }
+}
