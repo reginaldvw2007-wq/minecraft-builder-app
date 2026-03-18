@@ -27,7 +27,7 @@ interact with the intended flow before integrating a real photo-analysis backend
 - connect the app to a real photo-understanding pipeline
 - use actual image geometry or segmentation instead of filename and file-size heuristics
 - support saving projects and generating richer voxel outputs
-- add browser-level smoke coverage for custom upload scenarios
+- add broader browser smoke coverage for mobile layouts and edge-case uploads
 - convert the analyzer boundary from synchronous local mock execution to a service-ready async path
 
 ## Risks and blockers

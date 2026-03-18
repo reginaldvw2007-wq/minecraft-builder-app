@@ -72,8 +72,7 @@ Run before any preview handoff:
 
 Current automation support:
 
-- `npm run smoke:browser` covers the demo load plus export path
-- custom upload coverage still needs a browser automation pass
+- `npm run smoke:browser` covers custom upload plus export
 
 ## Failure Conditions
 

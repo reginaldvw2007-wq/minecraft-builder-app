@@ -35,7 +35,7 @@ and you can replace it by uploading your own images.
 - JSON and Markdown export for the current build plan
 - step-by-step build staging for Minecraft
 - unit tests around the generator and export path
-- repeatable browser smoke automation
+- repeatable browser smoke automation for upload and export
 
 ## Architecture
 

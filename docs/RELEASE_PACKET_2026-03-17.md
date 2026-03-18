@@ -48,8 +48,8 @@
 ## Risks
 
 - Quality risk:
-  - Browser smoke coverage is still narrow and focused on the demo/export path
-  - No validation yet for custom file upload behavior under different image types and sizes
+  - Browser smoke coverage is still narrow and focused on a small local upload set plus export
+  - Mobile-specific presentation and larger edge-case uploads still need dedicated checks
 - Security/process risk:
   - Governance requires explicit review evidence before sensitive/public expansion
   - The current security review is valid only while the app remains local-only

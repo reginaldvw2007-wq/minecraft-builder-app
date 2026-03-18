@@ -7,6 +7,8 @@ PORT="${PORT:-4178}"
 HOST="127.0.0.1"
 BASE_URL="http://${HOST}:${PORT}"
 SERVER_LOG="${ROOT_DIR}/output/playwright/browser-smoke-server.log"
+UPLOAD_ONE="${ROOT_DIR}/src/assets/hero.png"
+UPLOAD_TWO="${ROOT_DIR}/public/favicon.svg"
 
 export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 export PWCLI="${CODEX_HOME}/skills/playwright/scripts/playwright_cli.sh"
@@ -50,11 +52,18 @@ if ! curl -fsS "${BASE_URL}" >/dev/null 2>&1; then
 fi
 
 "${PWCLI}" open "${BASE_URL}" >/dev/null
+UPLOAD_CODE="(async (page) => { await page.locator(\"input[type=\\\"file\\\"]\").setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.waitForTimeout(150); })"
+"${PWCLI}" run-code "${UPLOAD_CODE}" >/dev/null
 SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
 SNAPSHOT_PATH="$(printf '%s\n' "${SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"
 
 if [[ -z "${SNAPSHOT_PATH}" || ! -f "${ROOT_DIR}/${SNAPSHOT_PATH}" ]]; then
   echo "Could not locate Playwright snapshot output."
+  exit 1
+fi
+
+if ! rg 'Using 2 uploaded photos for the current concept\.' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
+  echo "Upload smoke check did not find the uploaded-photo status message."
   exit 1
 fi
 
