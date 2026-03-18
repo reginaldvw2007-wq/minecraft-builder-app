@@ -1,5 +1,6 @@
 import { useEffect, useState, useTransition } from 'react'
 import './App.css'
+import voxelPocketScene from './assets/voxel-pocket-scene.svg'
 import {
   SHOT_ROLE_CYCLE,
   createDemoSources,
@@ -139,6 +140,11 @@ function App() {
       detail: plan.themeProfile.mobileHint,
     },
   ]
+  const artBadges = [
+    plan.themeProfile.tags[0] ?? plan.theme,
+    plan.dominantMaterial,
+    `${plan.dimensions.width} x ${plan.dimensions.depth}`,
+  ]
 
   function replaceSources(nextSources: SourceImage[]) {
     setSources(nextSources)
@@ -217,6 +223,29 @@ function App() {
             docks, and other modern block kits all feed the visual direction of the mock
             pass.
           </p>
+
+          <div className="hero-art">
+            <div className="hero-art__frame">
+              <img
+                src={voxelPocketScene}
+                alt="Original voxel-style build scene with a tower, tree, chest, and pocket inventory tiles."
+              />
+              <div className="hero-art__badges">
+                {artBadges.map((badge) => (
+                  <span key={badge} className="hero-art__badge">
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="hero-art__caption">
+              <p className="section-kicker">Voxel scene</p>
+              <p>
+                Original pocket-builder artwork so the app feels game-native now and can
+                swap to licensed official assets later if you secure them.
+              </p>
+            </div>
+          </div>
 
           <div className="hud-strip">
             {hudCards.map((card) => (
