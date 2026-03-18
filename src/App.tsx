@@ -1,9 +1,14 @@
-import { useEffect, useState, useTransition } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ChangeEvent,
+} from 'react'
 import './App.css'
 import captureQuestMap from './assets/capture-quest-map.svg'
 import voxelPocketScene from './assets/voxel-pocket-scene.svg'
 import {
-  SHOT_ROLE_CYCLE,
   createDemoSources,
   type BuildPlan,
   type LayerSlice,
@@ -18,44 +23,87 @@ import {
   createExportBaseName,
 } from './lib/exportBuildPlan'
 import {
-  MAX_REFERENCE_FILE_SIZE_BYTES,
   MAX_REFERENCE_FILES,
   summarizeReferenceValidation,
   validateReferenceFiles,
 } from './lib/validateSources'
 
-const INITIAL_SOURCES = createDemoSources()
-const INITIAL_ANALYSIS = analyzeStructure({ sources: INITIAL_SOURCES })
+const INITIAL_ANALYSIS = analyzeStructure({ sources: createDemoSources() })
 const INITIAL_PLAN = INITIAL_ANALYSIS.plan
-const UPLOAD_INPUT_ID = 'reference-upload-input'
+const CAMERA_INPUT_ID = 'camera-capture-input'
+const LIBRARY_INPUT_ID = 'library-upload-input'
+const MIN_RENDER_PHOTO_COUNT = 4
+const RENDER_STEPS = [
+  'Uploading photos',
+  'Reading the house shape',
+  'Placing the block shell',
+  'Writing the guide',
+] as const
 
 const PHOTO_MISSIONS = [
   {
+    id: 'front',
     step: '1',
     title: 'Front',
-    hint: 'Stand in front of the building and get the whole face.',
+    hint: 'Stand back and fit the whole front wall in the frame.',
+    role: 'Front',
   },
   {
+    id: 'front-left-corner',
     step: '2',
-    title: 'Left side',
-    hint: 'Walk to the left and grab the full wall.',
+    title: 'Front-left corner',
+    hint: 'Catch the front and left side together from the corner.',
+    role: 'Corner',
   },
   {
+    id: 'left-side',
     step: '3',
-    title: 'Right side',
-    hint: 'Walk to the right and grab the full wall.',
+    title: 'Left side',
+    hint: 'Aim straight at the left wall and keep the full side visible.',
+    role: 'Side',
   },
   {
+    id: 'back-left-corner',
     step: '4',
-    title: 'Back',
-    hint: 'Take one picture straight at the back.',
+    title: 'Back-left corner',
+    hint: 'Grab the back edge and left wall in one corner shot.',
+    role: 'Corner',
   },
   {
+    id: 'back',
     step: '5',
-    title: 'Roof bonus',
-    hint: 'If you can, get a roof shot from higher ground.',
+    title: 'Back',
+    hint: 'Stand behind the building and frame the full back.',
+    role: 'Front',
   },
-] as const
+  {
+    id: 'back-right-corner',
+    step: '6',
+    title: 'Back-right corner',
+    hint: 'Catch the back and right side together from the corner.',
+    role: 'Corner',
+  },
+  {
+    id: 'right-side',
+    step: '7',
+    title: 'Right side',
+    hint: 'Aim straight at the right wall and keep the whole side visible.',
+    role: 'Side',
+  },
+  {
+    id: 'front-right-corner',
+    step: '8',
+    title: 'Front-right corner',
+    hint: 'Finish the loop with the front and right wall together.',
+    role: 'Corner',
+  },
+] as const satisfies ReadonlyArray<{
+  id: string
+  step: string
+  title: string
+  hint: string
+  role: ShotRole
+}>
 
 const FILE_PREVIEW_TONES = [
   'linear-gradient(135deg, #49626d 0%, #d6b17a 100%)',
@@ -64,11 +112,12 @@ const FILE_PREVIEW_TONES = [
   'linear-gradient(135deg, #31455c 0%, #a6bcc8 100%)',
 ] as const
 
-const ROLE_NOTES: Record<ShotRole, string> = {
-  Front: 'Best for doorway position, facade rhythm, and overall read.',
-  Corner: 'Useful for confirming depth and roof direction in one frame.',
-  Side: 'Captures repeat windows, annexes, and wall length.',
-  Roof: 'Helps estimate pitch, trim, and final silhouette.',
+type SlotSource = SourceImage | null
+type AppView = 'capture' | 'render' | 'guide'
+type RenderState = 'idle' | 'rendering' | 'ready'
+
+function createEmptySlotSources(): SlotSource[] {
+  return PHOTO_MISSIONS.map(() => null)
 }
 
 function formatBytes(sizeBytes: number) {
@@ -79,16 +128,17 @@ function formatBytes(sizeBytes: number) {
   return `${Math.round(sizeBytes / 1_000)} KB`
 }
 
-function createSourceFromFile(file: File, index: number): SourceImage {
-  const role = SHOT_ROLE_CYCLE[index % SHOT_ROLE_CYCLE.length]
+function createSourceFromFile(file: File, slotIndex: number): SourceImage {
+  const mission = PHOTO_MISSIONS[slotIndex]
+  const role = mission?.role ?? 'Corner'
 
   return {
-    id: `${file.name}-${file.lastModified}-${index}`,
-    name: file.name,
+    id: `${mission?.id ?? 'slot'}-${file.name}-${file.lastModified}-${slotIndex}`,
+    name: file.name || `${mission?.title ?? 'house-photo'}.jpg`,
     sizeBytes: file.size,
     role,
-    notes: ROLE_NOTES[role],
-    previewTone: FILE_PREVIEW_TONES[index % FILE_PREVIEW_TONES.length],
+    notes: mission?.hint ?? 'House photo captured for the block render.',
+    previewTone: FILE_PREVIEW_TONES[slotIndex % FILE_PREVIEW_TONES.length],
     previewUrl: URL.createObjectURL(file),
     objectUrl: true,
   }
@@ -106,19 +156,70 @@ function downloadTextFile(fileName: string, contents: string, mimeType: string) 
   URL.revokeObjectURL(url)
 }
 
-function formatAnalysisMode(mode: AnalysisMode) {
-  return mode === 'mock' ? 'Mock analyzer' : mode
+function getNextOpenSlotIndex(slotSources: SlotSource[]) {
+  return slotSources.findIndex((source) => source === null)
+}
+
+function getOrderedSources(slotSources: SlotSource[]) {
+  return slotSources.filter((source): source is SourceImage => source !== null)
+}
+
+function buildDemoSlotSources() {
+  const nextSlots = createEmptySlotSources()
+
+  for (const [index, source] of createDemoSources().entries()) {
+    nextSlots[index] = source
+  }
+
+  return nextSlots
 }
 
 function App() {
-  const [sources, setSources] = useState<SourceImage[]>(INITIAL_SOURCES)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const libraryInputRef = useRef<HTMLInputElement>(null)
+  const renderTimersRef = useRef<number[]>([])
+
+  const [slotSources, setSlotSources] = useState<SlotSource[]>(createEmptySlotSources)
   const [plan, setPlan] = useState<BuildPlan>(INITIAL_PLAN)
   const [activeLayerId, setActiveLayerId] = useState(INITIAL_PLAN.layers[0]?.id ?? '')
-  const [analysisWarnings, setAnalysisWarnings] = useState(INITIAL_ANALYSIS.warnings)
+  const [analysisWarnings, setAnalysisWarnings] = useState<string[]>([])
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(INITIAL_ANALYSIS.mode)
+  const [view, setView] = useState<AppView>('capture')
+  const [renderState, setRenderState] = useState<RenderState>('idle')
+  const [renderStepIndex, setRenderStepIndex] = useState(0)
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
   const [intakeNotice, setIntakeNotice] = useState('')
   const [exportNotice, setExportNotice] = useState('')
   const [isPending, startTransition] = useTransition()
+
+  const sources = getOrderedSources(slotSources)
+  const nextOpenSlotIndex = getNextOpenSlotIndex(slotSources)
+  const activeSlotIndex =
+    selectedSlotIndex ?? (nextOpenSlotIndex === -1 ? PHOTO_MISSIONS.length - 1 : nextOpenSlotIndex)
+  const activeMission = PHOTO_MISSIONS[activeSlotIndex]
+  const activeLayer =
+    plan.layers.find((layer) => layer.id === activeLayerId) ?? plan.layers[0]
+  const usingDemo = sources.length > 0 && sources.every((source) => source.isDemo)
+  const totalReferenceSize = sources.reduce((sum, source) => sum + source.sizeBytes, 0)
+  const totalStacks = Math.ceil(plan.totalBlocks / 64)
+  const canRender = sources.length >= MIN_RENDER_PHOTO_COUNT
+  const quickBuildCards = [
+    {
+      label: 'Size',
+      value: `${plan.dimensions.width} x ${plan.dimensions.depth}`,
+      detail: `${plan.dimensions.height} blocks tall`,
+    },
+    {
+      label: 'Main block',
+      value: plan.dominantMaterial,
+      detail: `${totalStacks} stacks`,
+    },
+    {
+      label: 'Roof',
+      value: plan.roofline,
+      detail: `${plan.confidence}% confidence`,
+    },
+  ]
 
   useEffect(() => {
     return () => {
@@ -130,48 +231,109 @@ function App() {
     }
   }, [sources])
 
-  const activeLayer =
-    plan.layers.find((layer) => layer.id === activeLayerId) ?? plan.layers[0]
-  const usingDemo = sources.every((source) => source.isDemo)
-  const totalReferenceSize = sources.reduce((sum, source) => sum + source.sizeBytes, 0)
-  const totalStacks = Math.ceil(plan.totalBlocks / 64)
-  const quickBuildCards = [
-    {
-      label: 'Size',
-      value: `${plan.dimensions.width} x ${plan.dimensions.depth}`,
-      detail: `${plan.dimensions.height} blocks tall`,
-    },
-    {
-      label: 'Main block',
-      value: plan.dominantMaterial,
-      detail: `${totalStacks} stacks total`,
-    },
-    {
-      label: 'Roof',
-      value: plan.roofline,
-      detail: plan.theme,
-    },
-  ]
-  const artBadges = [
-    plan.themeProfile.tags[0] ?? plan.theme,
-    plan.dominantMaterial,
-    `${plan.dimensions.width} x ${plan.dimensions.depth}`,
-  ]
+  useEffect(() => {
+    return () => {
+      for (const timer of renderTimersRef.current) {
+        window.clearTimeout(timer)
+      }
+      renderTimersRef.current = []
+    }
+  }, [])
 
-  function replaceSources(nextSources: SourceImage[]) {
-    setSources(nextSources)
-    setExportNotice('')
+  function runRender(nextSources: SourceImage[]) {
+    for (const timer of renderTimersRef.current) {
+      window.clearTimeout(timer)
+    }
+    renderTimersRef.current = []
 
-    startTransition(() => {
-      const nextAnalysis = analyzeStructure({ sources: nextSources })
-      setPlan(nextAnalysis.plan)
-      setAnalysisWarnings(nextAnalysis.warnings)
-      setAnalysisMode(nextAnalysis.mode)
-      setActiveLayerId(nextAnalysis.plan.layers[0]?.id ?? '')
-    })
+    if (nextSources.length < MIN_RENDER_PHOTO_COUNT) {
+      setRenderState('idle')
+      setRenderStepIndex(0)
+      setView('capture')
+      return
+    }
+
+    setView('render')
+    setRenderState('rendering')
+    setRenderStepIndex(0)
+
+    const stepTimers = RENDER_STEPS.slice(1).map((_, index) =>
+      window.setTimeout(() => {
+        setRenderStepIndex(index + 1)
+      }, (index + 1) * 320),
+    )
+
+    const finalizeTimer = window.setTimeout(() => {
+      startTransition(() => {
+        const nextAnalysis = analyzeStructure({ sources: nextSources })
+        setPlan(nextAnalysis.plan)
+        setAnalysisWarnings(nextAnalysis.warnings)
+        setAnalysisMode(nextAnalysis.mode)
+        setActiveLayerId(nextAnalysis.plan.layers[0]?.id ?? '')
+        setRenderState('ready')
+      })
+    }, 1280)
+
+    renderTimersRef.current = [...stepTimers, finalizeTimer]
   }
 
-  function handleFileSelection(event: React.ChangeEvent<HTMLInputElement>) {
+  function openCamera() {
+    cameraInputRef.current?.click()
+  }
+
+  function openLibrary() {
+    libraryInputRef.current?.click()
+  }
+
+  function clearSession() {
+    setSlotSources(createEmptySlotSources())
+    setSelectedSlotIndex(null)
+    setView('capture')
+    setRenderState('idle')
+    setRenderStepIndex(0)
+    setIntakeNotice('')
+    setExportNotice('')
+  }
+
+  function handleCameraCapture(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0]
+
+    if (!selectedFile) {
+      return
+    }
+
+    const validation = validateReferenceFiles([selectedFile])
+    const validationSummary = summarizeReferenceValidation(validation)
+
+    if (validation.acceptedFiles.length === 0) {
+      setIntakeNotice(validationSummary)
+      event.target.value = ''
+      return
+    }
+
+    const nextSlots =
+      usingDemo && sources.length > 0 ? createEmptySlotSources() : [...slotSources]
+    const existingSource = nextSlots[activeSlotIndex]
+
+    if (existingSource?.objectUrl && existingSource.previewUrl) {
+      URL.revokeObjectURL(existingSource.previewUrl)
+    }
+
+    nextSlots[activeSlotIndex] = createSourceFromFile(validation.acceptedFiles[0], activeSlotIndex)
+
+    const nextSources = getOrderedSources(nextSlots)
+
+    setSlotSources(nextSlots)
+    setSelectedSlotIndex(
+      getNextOpenSlotIndex(nextSlots) === -1 ? null : getNextOpenSlotIndex(nextSlots),
+    )
+    runRender(nextSources)
+    setIntakeNotice(validationSummary || `${activeMission.title} captured.`)
+    setExportNotice('')
+    event.target.value = ''
+  }
+
+  function handleLibrarySelection(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files ?? [])
 
     if (selectedFiles.length === 0) {
@@ -180,21 +342,54 @@ function App() {
 
     const validation = validateReferenceFiles(selectedFiles)
     const validationSummary = summarizeReferenceValidation(validation)
+    const baseSlots =
+      usingDemo && sources.length > 0 ? createEmptySlotSources() : [...slotSources]
+    const openSlotIndexes = baseSlots
+      .map((slotSource, index) => (slotSource === null ? index : -1))
+      .filter((index) => index >= 0)
+    const acceptedFiles = validation.acceptedFiles.slice(0, openSlotIndexes.length)
+    const noticeParts = validationSummary ? [validationSummary] : []
 
-    setIntakeNotice(validationSummary)
+    if (validation.acceptedFiles.length > openSlotIndexes.length) {
+      noticeParts.push(`Only ${MAX_REFERENCE_FILES} photos fit in one render.`)
+    }
 
-    if (validation.acceptedFiles.length === 0) {
+    if (acceptedFiles.length === 0) {
+      setIntakeNotice(noticeParts.join(' '))
       event.target.value = ''
       return
     }
 
-    replaceSources(validation.acceptedFiles.map(createSourceFromFile))
+    const nextSlots = [...baseSlots]
+
+    acceptedFiles.forEach((file, index) => {
+      const slotIndex = openSlotIndexes[index]
+      nextSlots[slotIndex] = createSourceFromFile(file, slotIndex)
+    })
+
+    const nextSources = getOrderedSources(nextSlots)
+
+    setSlotSources(nextSlots)
+    setSelectedSlotIndex(
+      getNextOpenSlotIndex(nextSlots) === -1 ? null : getNextOpenSlotIndex(nextSlots),
+    )
+    runRender(nextSources)
+    setIntakeNotice(
+      noticeParts.join(' ') || `Added ${acceptedFiles.length} house photo${acceptedFiles.length === 1 ? '' : 's'}.`,
+    )
+    setExportNotice('')
     event.target.value = ''
   }
 
   function loadDemoSet() {
-    setIntakeNotice('Restored the demo reference set.')
-    replaceSources(createDemoSources())
+    const nextSlots = buildDemoSlotSources()
+    const nextSources = getOrderedSources(nextSlots)
+
+    setSlotSources(nextSlots)
+    setSelectedSlotIndex(null)
+    setIntakeNotice('Demo house loaded.')
+    setExportNotice('')
+    runRender(nextSources)
   }
 
   function exportJson() {
@@ -212,305 +407,303 @@ function App() {
   return (
     <div className="app-shell">
       <input
+        ref={cameraInputRef}
         className="shared-upload-input"
-        data-testid="reference-upload-input"
-        id={UPLOAD_INPUT_ID}
+        data-testid="camera-capture-input"
+        id={CAMERA_INPUT_ID}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraCapture}
+      />
+      <input
+        ref={libraryInputRef}
+        className="shared-upload-input"
+        data-testid="library-upload-input"
+        id={LIBRARY_INPUT_ID}
         type="file"
         accept="image/*"
         multiple
-        onChange={handleFileSelection}
+        onChange={handleLibrarySelection}
       />
 
       <header className="hero-panel">
         <div className="hero-copy">
-          <p className="eyebrow">The Infinity Block</p>
-          <h1>Take 4 pics. Build it in Minecraft.</h1>
-          <p className="hero-summary">
-            Easy for kids: walk around the building, take the pictures below, then tap
-            upload.
-          </p>
-          <p className="hero-summary hero-summary--secondary">
-            Best results: front, left side, right side, back. Roof is a bonus.
-          </p>
-          <p className="hero-note">
-            Big buttons first. Full build details lower down when you want them.
-          </p>
-
-          <div className="hero-art">
-            <div className="hero-art__frame">
-              <img
-                src={voxelPocketScene}
-                alt="Original voxel-style build scene with a tower, tree, chest, and pocket inventory tiles."
-              />
-              <div className="hero-art__badges">
-                {artBadges.map((badge) => (
-                  <span key={badge} className="hero-art__badge">
-                    {badge}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="hero-art__caption">
-              <p className="section-kicker">Minecraft vibe</p>
-              <p>Original voxel artwork to make the app feel like a real block-building tool.</p>
-            </div>
+          <p className="eyebrow">Mobile Minecraft Builder</p>
+          <div className="brand-lockup">
+            <h1 className="brand-title">
+              <span>The Infinity</span>
+              <span>Block</span>
+            </h1>
+            <p className="brand-tagline">kids yearn foir the mines</p>
           </div>
-
-          <div className="quest-board">
-            <div className="quest-board__header">
-              <div>
-                <p className="section-kicker">Take these pictures</p>
-                <h2>Walk around the building</h2>
-              </div>
-              <p className="section-meta">4 must-have shots + 1 roof bonus</p>
-            </div>
-            <div className="quest-map">
-              <img
-                src={captureQuestMap}
-                alt="Simple picture guide showing front, left, right, back, and roof bonus angles around a block house."
-              />
-            </div>
-            <div className="photo-mission-grid">
-              {PHOTO_MISSIONS.map((mission) => (
-                <article key={mission.step} className="photo-mission-card">
-                  <span className="photo-mission-card__number">{mission.step}</span>
-                  <strong>{mission.title}</strong>
-                  <p>{mission.hint}</p>
-                </article>
-              ))}
-            </div>
+          <p className="hero-summary">Take 4 to 8 house photos. We turn them into blocks.</p>
+          <div className="hero-pill-row" aria-label="App promises">
+            <span>Phone first</span>
+            <span>Auto render</span>
+            <span>Kid easy</span>
           </div>
         </div>
 
-        <div className="hero-actions">
-          <p className="section-kicker">Start here</p>
-          <label className="upload-button" htmlFor={UPLOAD_INPUT_ID}>
-            Upload My Pictures
-          </label>
-          <p className="status-note">
-            Up to {MAX_REFERENCE_FILES} images. Keep each picture under {Math.round(MAX_REFERENCE_FILE_SIZE_BYTES / 1_000_000)} MB.
-          </p>
-          <button type="button" className="ghost-button" onClick={loadDemoSet}>
-            Try Demo Build
-          </button>
-          <p className="status-note" aria-live="polite">
-            {isPending
-              ? 'Building your block guide...'
-              : usingDemo
-                ? 'Demo pictures are loaded. You can swap them with your own any time.'
-                : `Using ${sources.length} uploaded photo${sources.length === 1 ? '' : 's'}.`}
-          </p>
-          {intakeNotice ? (
-            <p className="status-note status-note--warning" aria-live="polite">
-              {intakeNotice}
-            </p>
-          ) : null}
-          {exportNotice ? (
-            <p className="status-note status-note--accent" aria-live="polite">
-              {exportNotice}
-            </p>
-          ) : null}
-          <div className="quick-action-tips">
-            <span>Big clear shots</span>
-            <span>No zoom</span>
-            <span>Whole building in frame</span>
+        <div className="hero-art">
+          <div className="hero-art__frame">
+            <img
+              src={voxelPocketScene}
+              alt="Original voxel-style build scene with a tower, tree, chest, and block inventory."
+            />
           </div>
+          <p className="hero-art__caption">Minecraft-style art. Simple buttons. Fast build plan.</p>
         </div>
       </header>
 
-      <main className="workspace-grid">
-        <section className="panel intake-panel">
+      <nav className="mode-switch" aria-label="Builder steps">
+        <button
+          type="button"
+          className={`mode-switch__button ${view === 'capture' ? 'mode-switch__button--active' : ''}`}
+          onClick={() => setView('capture')}
+        >
+          1. Take Photos
+        </button>
+        <button
+          type="button"
+          className={`mode-switch__button ${view === 'render' ? 'mode-switch__button--active' : ''}`}
+          onClick={() => setView('render')}
+          disabled={!canRender}
+        >
+          2. Auto Render
+        </button>
+        <button
+          type="button"
+          className={`mode-switch__button ${view === 'guide' ? 'mode-switch__button--active' : ''}`}
+          onClick={() => setView('guide')}
+          disabled={renderState !== 'ready'}
+        >
+          3. Build Guide
+        </button>
+      </nav>
+
+      {view === 'capture' ? (
+        <section className="panel screen-panel capture-screen">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Your pictures</p>
-              <h2>Photo bag</h2>
+              <p className="section-kicker">Step 1</p>
+              <h2>Walk around the house</h2>
             </div>
-            <p className="section-meta">
-              {sources.length} photo{sources.length === 1 ? '' : 's'} • {formatBytes(totalReferenceSize)}
+            <p className="progress-chip">
+              {sources.length} / {PHOTO_MISSIONS.length} photos
             </p>
           </div>
 
-          <div className="capture-grid">
-            {sources.map((source) => (
-              <article key={source.id} className="capture-card">
-                <div className="capture-preview">
-                  {source.previewUrl ? (
-                    <img src={source.previewUrl} alt={source.name} />
-                  ) : (
-                    <div
-                      className="capture-swatch"
-                      style={{ backgroundImage: source.previewTone }}
-                    >
-                      <span>{source.role}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="capture-body">
-                  <div className="capture-line">
-                    <span className="capture-role">{source.role}</span>
-                    <span className="capture-size">{formatBytes(source.sizeBytes)}</span>
-                  </div>
-                  <h3>{source.role} view</h3>
-                  <p>{source.notes}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="pipeline-strip">
-            <article className="pipeline-card">
-              <p className="pipeline-step">01 Upload</p>
-              <strong>Take the pictures</strong>
-              <p>Use the guide above so the app sees the whole building.</p>
-            </article>
-            <article className="pipeline-card">
-              <p className="pipeline-step">02 Read</p>
-              <strong>Check the shape</strong>
-              <p>Flip through the layers and make sure the shell looks right.</p>
-            </article>
-            <article className="pipeline-card">
-              <p className="pipeline-step">03 Build</p>
-              <strong>Start building</strong>
-              <p>Use the block list and step cards when you jump into Minecraft.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="panel overview-panel">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">Quick build</p>
-              <h2>What to build</h2>
-            </div>
-            <div className="chip-row">
-              <span className="confidence-chip">{plan.confidence}% confidence</span>
-              <span className="confidence-chip confidence-chip--muted">
-                {formatAnalysisMode(analysisMode)}
-              </span>
-            </div>
-          </div>
-
-          <p className="quick-build-summary">{plan.summary}</p>
-
-          <div className="metric-grid">
-            {quickBuildCards.map((card) => (
-              <article key={card.label} className="metric-card">
-                <span className="metric-label">{card.label}</span>
-                <strong>{card.value}</strong>
-                <p>{card.detail}</p>
-              </article>
-            ))}
-          </div>
-
-          <details className="details-drawer">
-            <summary>More build details</summary>
-            <div className="details-drawer__content">
-              <div className="insight-list">
-                {plan.insights.map((insight) => (
-                  <article key={insight.label} className="insight-card">
-                    <p className="insight-label">{insight.label}</p>
-                    <strong>{insight.value}</strong>
-                    <p>{insight.detail}</p>
-                  </article>
-                ))}
-              </div>
-
-              <div className="theme-profile-grid">
-                <article className="theme-profile-card">
-                  <p className="insight-label">Biome fit</p>
-                  <strong>{plan.themeProfile.biome}</strong>
-                  <p>{plan.themeProfile.vibe}</p>
-                </article>
-                <article className="theme-profile-card">
-                  <p className="insight-label">Build lane</p>
-                  <strong>{plan.themeProfile.playstyle}</strong>
-                  <p>Where this style fits best in a Minecraft world.</p>
-                </article>
-                <article className="theme-profile-card">
-                  <p className="insight-label">Phone hint</p>
-                  <strong>Build in passes</strong>
-                  <p>{plan.themeProfile.mobileHint}</p>
-                </article>
-              </div>
-
-              <div className="source-notes">
-                <p className="section-kicker">Why it guessed this</p>
-                <ul>
-                  {plan.sourceNotes.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="warning-card">
-                <p className="section-kicker">Prototype note</p>
-                <ul className="warning-list">
-                  {analysisWarnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
+          <div className="capture-hero-card">
+            <div className="capture-hero-card__copy">
+              <p className="section-kicker">{canRender ? 'Render unlocked' : 'Next photo'}</p>
+              <h3>{activeMission.title}</h3>
+              <p>{activeMission.hint}</p>
+              <div className="capture-status-row">
+                <span>{Math.max(MIN_RENDER_PHOTO_COUNT - sources.length, 0)} left to start render</span>
+                <span>{Math.max(PHOTO_MISSIONS.length - sources.length, 0)} open slots</span>
               </div>
             </div>
-          </details>
-        </section>
 
-        <section className="panel layers-panel">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">Build shape</p>
-              <h2>Layers and skyline</h2>
-            </div>
-            <p className="section-meta">
-              Tap a layer to see the shell before you start building.
-            </p>
-          </div>
-
-          <div className="layer-tabs" role="tablist" aria-label="Voxel layer slices">
-            {plan.layers.map((layer) => (
-              <button
-                key={layer.id}
-                type="button"
-                role="tab"
-                className={`layer-tab ${layer.id === activeLayer.id ? 'layer-tab--active' : ''}`}
-                aria-selected={layer.id === activeLayer.id}
-                onClick={() => setActiveLayerId(layer.id)}
-              >
-                <span>{layer.label}</span>
-                <small>{layer.elevation}</small>
+            <div className="capture-action-stack">
+              <button type="button" className="upload-button upload-button--xl" onClick={openCamera}>
+                {slotSources[activeSlotIndex] ? `Retake ${activeMission.title}` : `Take ${activeMission.title}`}
               </button>
-            ))}
+              <button type="button" className="ghost-button" onClick={openLibrary}>
+                Upload from library
+              </button>
+              <button type="button" className="ghost-button" onClick={loadDemoSet}>
+                Try demo house
+              </button>
+              {sources.length > 0 ? (
+                <button type="button" className="ghost-button ghost-button--quiet" onClick={clearSession}>
+                  Start over
+                </button>
+              ) : null}
+            </div>
           </div>
 
-          <div className="voxel-layout">
-            <div className="skyline-card">
-              <div className="skyline-header">
-                <div>
-                  <p className="section-kicker">Front read</p>
-                  <h3>Silhouette profile</h3>
-                </div>
-                <p>{plan.dimensions.height} block max height</p>
-              </div>
-              <div className="skyline-chart" aria-label="Estimated front elevation bars">
-                {plan.skyline.map((height, index) => (
-                  <span
-                    key={`${height}-${index}`}
-                    className="skyline-bar"
-                    style={{ height: `${(height / (plan.dimensions.height + 2)) * 100}%` }}
-                    title={`Column ${index + 1}: ${height} blocks`}
-                  />
+          <div className="quest-map-card">
+            <img
+              src={captureQuestMap}
+              alt="Simple house photo route showing front, corners, and side shots around a block building."
+            />
+          </div>
+
+          <div className="mission-grid" aria-label="House photo slots">
+            {PHOTO_MISSIONS.map((mission, index) => {
+              const slotSource = slotSources[index]
+              const missionState = slotSource
+                ? 'done'
+                : index === activeSlotIndex
+                  ? 'active'
+                  : 'waiting'
+
+              return (
+                <button
+                  key={mission.id}
+                  type="button"
+                  className={`mission-card mission-card--${missionState}`}
+                  onClick={() => setSelectedSlotIndex(index)}
+                >
+                  <span className="mission-card__step">{mission.step}</span>
+                  <strong>{mission.title}</strong>
+                  {slotSource?.previewUrl ? (
+                    <img src={slotSource.previewUrl} alt={`${mission.title} preview`} />
+                  ) : slotSource ? (
+                    <div
+                      className="mission-card__swatch"
+                      style={{ backgroundImage: slotSource.previewTone }}
+                    />
+                  ) : (
+                    <div className="mission-card__empty" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="capture-footer">
+            <p className="status-note" aria-live="polite">
+              {intakeNotice ||
+                (sources.length === 0
+                  ? 'Tap the green button and keep walking around the house.'
+                  : `${sources.length} photo${sources.length === 1 ? '' : 's'} ready.`)}
+            </p>
+            {sources.length > 0 ? (
+              <p className="status-note status-note--muted">
+                {formatBytes(totalReferenceSize)} total
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {view === 'render' ? (
+        <section className="panel screen-panel render-screen">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Step 2</p>
+              <h2>Auto render</h2>
+            </div>
+            <p className="progress-chip">{sources.length} photos loaded</p>
+          </div>
+
+          {!canRender ? (
+            <div className="empty-state-card">
+              <h3>Take 4 photos first</h3>
+              <p>Front, corners, and sides are enough to start the Minecraft shape.</p>
+              <button type="button" className="upload-button" onClick={() => setView('capture')}>
+                Go take photos
+              </button>
+            </div>
+          ) : renderState === 'rendering' || isPending ? (
+            <div className="rendering-card" data-testid="rendering-card">
+              <p className="section-kicker">Working now</p>
+              <h3>Rendering your Minecraft build</h3>
+              <div className="render-step-list" aria-label="Rendering progress">
+                {RENDER_STEPS.map((step, index) => (
+                  <div
+                    key={step}
+                    className={`render-step ${index <= renderStepIndex ? 'render-step--active' : ''}`}
+                  >
+                    <span>{index + 1}</span>
+                    <strong>{step}</strong>
+                  </div>
                 ))}
               </div>
             </div>
+          ) : (
+            <div className="render-ready-stack">
+              <div className="render-ready-card">
+                <div className="render-ready-card__header">
+                  <div>
+                    <p className="section-kicker">Render ready</p>
+                    <h3>{plan.structureName}</h3>
+                  </div>
+                  <div className="chip-row">
+                    <span className="confidence-chip">{plan.confidence}% confidence</span>
+                    <span className="confidence-chip confidence-chip--muted">{analysisMode}</span>
+                  </div>
+                </div>
+                <p className="render-ready-card__summary">{plan.summary}</p>
+                <div className="metric-grid">
+                  {quickBuildCards.map((card) => (
+                    <article key={card.label} className="metric-card">
+                      <span className="metric-label">{card.label}</span>
+                      <strong>{card.value}</strong>
+                      <p>{card.detail}</p>
+                    </article>
+                  ))}
+                </div>
+                <div className="render-ready-card__actions">
+                  <button type="button" className="upload-button" onClick={() => setView('guide')}>
+                    Open Step-by-Step Guide
+                  </button>
+                  <button type="button" className="ghost-button" onClick={() => setView('capture')}>
+                    Add more photos
+                  </button>
+                </div>
+              </div>
 
-            <LayerPreview layer={activeLayer} width={plan.dimensions.width} />
-          </div>
+              <div className="voxel-layout">
+                <div className="skyline-card">
+                  <div className="skyline-header">
+                    <div>
+                      <p className="section-kicker">Front read</p>
+                      <h3>Silhouette</h3>
+                    </div>
+                    <p>{plan.dimensions.height} blocks tall</p>
+                  </div>
+                  <div className="skyline-chart" aria-label="Estimated front elevation bars">
+                    {plan.skyline.map((height, index) => (
+                      <span
+                        key={`${height}-${index}`}
+                        className="skyline-bar"
+                        style={{ height: `${(height / (plan.dimensions.height + 2)) * 100}%` }}
+                        title={`Column ${index + 1}: ${height} blocks`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="slice-card">
+                  <div className="slice-header">
+                    <div>
+                      <p className="section-kicker">Block shell</p>
+                      <h3>Layer preview</h3>
+                    </div>
+                    <p>{activeLayer.summary}</p>
+                  </div>
+                  <div className="layer-tabs" role="tablist" aria-label="Voxel layer slices">
+                    {plan.layers.map((layer) => (
+                      <button
+                        key={layer.id}
+                        type="button"
+                        role="tab"
+                        className={`layer-tab ${layer.id === activeLayer.id ? 'layer-tab--active' : ''}`}
+                        aria-selected={layer.id === activeLayer.id}
+                        onClick={() => setActiveLayerId(layer.id)}
+                      >
+                        <span>{layer.label}</span>
+                        <small>{layer.elevation}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <LayerPreview layer={activeLayer} width={plan.dimensions.width} />
+                </div>
+              </div>
+            </div>
+          )}
         </section>
+      ) : null}
 
-        <section className="panel guide-panel">
+      {view === 'guide' ? (
+        <section className="panel screen-panel guide-screen">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Build guide</p>
-              <h2>Blocks and steps</h2>
+              <p className="section-kicker">Step 3</p>
+              <h2>Build guide</h2>
             </div>
             <div className="secondary-actions">
               <button type="button" className="ghost-button" onClick={exportJson}>
@@ -522,64 +715,108 @@ function App() {
             </div>
           </div>
 
-          <div className="hotbar-panel">
-            <p className="section-kicker">Hotbar loadout</p>
-            <div className="hotbar-strip">
-              {plan.palette.map((material) => (
-                <article key={material.block} className={`hotbar-slot tone-${material.tone}`}>
-                  <span>{Math.ceil(material.amount / 64)} stacks</span>
-                  <strong>{material.block}</strong>
-                  <p>{material.purpose}</p>
-                </article>
-              ))}
+          {renderState !== 'ready' ? (
+            <div className="empty-state-card">
+              <h3>Render the house first</h3>
+              <p>Once the block model is ready, the step-by-step guide shows up here.</p>
+              <button type="button" className="upload-button" onClick={() => setView('render')}>
+                Go to render
+              </button>
             </div>
-          </div>
-
-          <div className="material-grid">
-            {plan.palette.map((material) => (
-              <article key={material.block} className={`material-card tone-${material.tone}`}>
-                <p className="material-amount">{material.amount.toLocaleString()} blocks</p>
-                <h3>{material.block}</h3>
-                <p>{material.purpose}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className="stage-grid">
-            {plan.stages.map((stage) => (
-              <article key={stage.title} className="stage-card">
-                <div className="stage-header">
-                  <div>
-                    <p className="stage-window">{stage.window}</p>
-                    <h3>{stage.title}</h3>
-                  </div>
-                  <span>{stage.materials}</span>
+          ) : (
+            <>
+              <div className="guide-header-card">
+                <div>
+                  <p className="section-kicker">Minecraft loadout</p>
+                  <h3>{plan.theme}</h3>
                 </div>
-                <p className="stage-goal">{stage.goal}</p>
-                <ul className="stage-list">
-                  {stage.checklist.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-                <p className="stage-output">Output: {stage.output}</p>
-              </article>
-            ))}
-          </div>
+                <p>{plan.themeProfile.playstyle}</p>
+              </div>
+
+              <div className="hotbar-strip">
+                {plan.palette.map((material) => (
+                  <article key={material.block} className={`hotbar-slot tone-${material.tone}`}>
+                    <span>{Math.ceil(material.amount / 64)} stacks</span>
+                    <strong>{material.block}</strong>
+                    <p>{material.purpose}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="stage-grid">
+                {plan.stages.map((stage) => (
+                  <article key={stage.title} className="stage-card">
+                    <div className="stage-header">
+                      <div>
+                        <p className="stage-window">{stage.window}</p>
+                        <h3>{stage.title}</h3>
+                      </div>
+                      <span>{stage.materials}</span>
+                    </div>
+                    <p className="stage-goal">{stage.goal}</p>
+                    <ul className="stage-list">
+                      {stage.checklist.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                    <p className="stage-output">Output: {stage.output}</p>
+                  </article>
+                ))}
+              </div>
+
+              <details className="details-drawer">
+                <summary>More build details</summary>
+                <div className="details-drawer__content">
+                  <div className="material-grid">
+                    {plan.palette.map((material) => (
+                      <article key={material.block} className={`material-card tone-${material.tone}`}>
+                        <p className="material-amount">{material.amount.toLocaleString()} blocks</p>
+                        <h3>{material.block}</h3>
+                        <p>{material.purpose}</p>
+                      </article>
+                    ))}
+                  </div>
+
+                  {analysisWarnings.length > 0 ? (
+                    <div className="warning-card">
+                      <p className="section-kicker">Prototype note</p>
+                      <ul className="warning-list">
+                        {analysisWarnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              </details>
+            </>
+          )}
+
+          {exportNotice ? (
+            <p className="status-note status-note--accent" aria-live="polite">
+              {exportNotice}
+            </p>
+          ) : null}
         </section>
-      </main>
+      ) : null}
 
       <div className="mobile-hotbar" aria-label="Pocket hotbar actions">
-        <label className="mobile-hotbar__slot mobile-hotbar__slot--primary" htmlFor={UPLOAD_INPUT_ID}>
-          Upload
-        </label>
-        <button type="button" className="mobile-hotbar__slot" onClick={loadDemoSet}>
-          Demo
+        <button type="button" className="mobile-hotbar__slot mobile-hotbar__slot--primary" onClick={openCamera}>
+          Camera
         </button>
-        <button type="button" className="mobile-hotbar__slot" onClick={exportJson}>
-          JSON
+        <button type="button" className="mobile-hotbar__slot" onClick={() => setView('render')} disabled={!canRender}>
+          Render
         </button>
-        <button type="button" className="mobile-hotbar__slot" onClick={exportMarkdown}>
+        <button
+          type="button"
+          className="mobile-hotbar__slot"
+          onClick={() => setView('guide')}
+          disabled={renderState !== 'ready'}
+        >
           Guide
+        </button>
+        <button type="button" className="mobile-hotbar__slot" onClick={clearSession}>
+          Reset
         </button>
       </div>
     </div>
@@ -593,15 +830,7 @@ type LayerPreviewProps = {
 
 function LayerPreview({ layer, width }: LayerPreviewProps) {
   return (
-    <div className="slice-card">
-      <div className="slice-header">
-        <div>
-          <p className="section-kicker">{layer.elevation}</p>
-          <h3>{layer.label}</h3>
-        </div>
-        <p>{layer.summary}</p>
-      </div>
-
+    <>
       <div
         className="layer-grid"
         style={{ gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))` }}
@@ -612,19 +841,20 @@ function LayerPreview({ layer, width }: LayerPreviewProps) {
             <span
               key={`${rowIndex}-${columnIndex}`}
               className={`layer-cell layer-cell--${cell}`}
+              title={`Row ${rowIndex + 1}, Column ${columnIndex + 1}: ${cell}`}
             />
           )),
         )}
       </div>
 
-      <div className="layer-legend" aria-hidden="true">
+      <div className="layer-legend" aria-label="Voxel legend">
         <span>
           <i className="layer-cell layer-cell--wall" />
           Wall
         </span>
         <span>
           <i className="layer-cell layer-cell--fill" />
-          Solid
+          Fill
         </span>
         <span>
           <i className="layer-cell layer-cell--highlight" />
@@ -632,10 +862,10 @@ function LayerPreview({ layer, width }: LayerPreviewProps) {
         </span>
         <span>
           <i className="layer-cell layer-cell--empty" />
-          Open
+          Empty
         </span>
       </div>
-    </div>
+    </>
   )
 }
 
