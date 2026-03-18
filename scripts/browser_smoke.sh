@@ -53,7 +53,7 @@ fi
 
 "${PWCLI}" close-all >/dev/null 2>&1 || true
 "${PWCLI}" open "${BASE_URL}" >/dev/null
-UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"reference-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByText(\"Using 2 uploaded photos for the current concept.\").waitFor({ timeout: 4000 }); })"
+UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"reference-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByText(\"Using 2 uploaded photos.\").waitFor({ timeout: 4000 }); })"
 "${PWCLI}" run-code "${UPLOAD_CODE}" >/dev/null
 SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
 SNAPSHOT_PATH="$(printf '%s\n' "${SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"
@@ -63,7 +63,7 @@ if [[ -z "${SNAPSHOT_PATH}" || ! -f "${ROOT_DIR}/${SNAPSHOT_PATH}" ]]; then
   exit 1
 fi
 
-if ! rg 'Using 2 uploaded photos for the current concept\.' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
+if ! rg 'Using 2 uploaded photos\.' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
   echo "Upload smoke check did not find the uploaded-photo status message."
   exit 1
 fi
