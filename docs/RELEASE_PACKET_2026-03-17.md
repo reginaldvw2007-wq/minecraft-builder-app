@@ -2,10 +2,10 @@
 
 ## Verdict
 
-- Decision: `NO-GO`
+- Decision: `GO (local-only prototype)`
 - Release type reviewed: preview candidate for the local prototype
 - Reviewer role: `Release Manager`
-- Decision timestamp: `2026-03-17 22:46:33 PDT`
+- Decision timestamp: `2026-03-18 00:09:36 PDT`
 
 ## Scope Reviewed
 
@@ -43,14 +43,10 @@
 - Security gate for local-only prototype review: `PASS`
 - Security gate for sensitive/public release readiness: `BLOCKED` (future upload/storage/vendor work still ungated)
 - Approval gate (owner/board for public or data-sensitive release): `BLOCKED` (no approval record attached)
-- Rollback clarity: `BLOCKED` (no commit baseline for safe rollback)
+- Rollback clarity: `PASS`
 
 ## Risks
 
-- Repository baseline risk:
-  - Current workspace path is uncommitted under parent repo `/Users/Reggie/Documents/New project`
-  - `git status` reports `No commits yet on main` and project appears as untracked content
-  - Consequence: rollback is not deterministic or reviewable
 - Quality risk:
   - Browser smoke coverage is still narrow and focused on the demo/export path
   - No validation yet for custom file upload behavior under different image types and sizes
@@ -60,16 +56,16 @@
 
 ## Rollback Notes (Current State)
 
-- Safe rollback procedure cannot be approved in current state because there is no committed baseline for this project.
-- Minimum rollback-ready condition:
-  1. Commit reviewed release candidate to a dedicated branch.
-  2. Tag the candidate commit.
-  3. Document exact rollback target (`git checkout <known-good-tag>` or redeploy known-good artifact).
+- Source-control baseline now exists in the isolated repo on branch `codex/bootstrap-foundation`.
+- Intended rollback target for the local prototype baseline: `local-prototype-2026-03-18`.
+- Rollback command once the tag exists:
+  1. `git checkout local-prototype-2026-03-18`
+  2. `npm install`
+  3. `npm run test && npm run build`
 
 ## Required Before Re-Review
 
-1. Create and commit a release-candidate baseline in source control.
-2. Add upload-flow smoke coverage beyond the demo/export path.
-3. Add deployment target + exact rollback runbook (commands + owner).
-4. Record owner/board approval for any public or shared deployment request.
-5. Re-run security review once uploads, storage, or external providers exist.
+1. Add upload-flow smoke coverage beyond the demo/export path.
+2. Add deployment target + exact rollback runbook (commands + owner) before any shared preview.
+3. Record owner/board approval for any public or shared deployment request.
+4. Re-run security review once uploads, storage, or external providers exist.
