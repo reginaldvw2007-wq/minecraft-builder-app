@@ -691,8 +691,8 @@
   display: grid;
   place-items: center;
   padding: 104px 14px 92px;
-  perspective: 1400px;
-  perspective-origin: 50% 42%;
+  perspective: 1180px;
+  perspective-origin: 50% 38%;
   touch-action: none;
   user-select: none;
   cursor: grab;
@@ -736,17 +736,18 @@
   width: 100%;
   height: 100%;
   transform:
-    translateY(var(--viewer-lift))
+    translateZ(28px)
+    translateY(calc(var(--viewer-lift) + 10px))
     scale(var(--viewer-scale))
     rotateX(var(--viewer-pitch))
     rotateY(var(--viewer-yaw));
-  transition: transform 120ms ease;
+  transition: transform 160ms ease;
 }
 
 .slice-orbit__model {
   position: absolute;
   left: 50%;
-  top: 58%;
+  top: 61%;
 }
 
 .slice-orbit__ground {
@@ -800,6 +801,7 @@
   transition:
     transform 180ms ease,
     filter 180ms ease;
+  transform-style: preserve-3d;
 }
 
 .voxel-cube__face {
@@ -808,31 +810,37 @@
   inset: 0;
   backface-visibility: hidden;
   background-size: 100% 100%, 8px 8px, 8px 8px, 100% 100%;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.14);
 }
 
 .voxel-cube__face--front {
-  transform: rotateY(0deg) translateZ(12px);
+  transform: rotateY(0deg) translateZ(var(--cube-half));
 }
 
 .voxel-cube__face--back {
-  transform: rotateY(180deg) translateZ(12px);
+  transform: rotateY(180deg) translateZ(var(--cube-half));
 }
 
 .voxel-cube__face--right {
-  transform: rotateY(90deg) translateZ(12px);
+  transform: rotateY(90deg) translateZ(var(--cube-half));
 }
 
 .voxel-cube__face--left {
-  transform: rotateY(-90deg) translateZ(12px);
+  transform: rotateY(-90deg) translateZ(var(--cube-half));
 }
 
 .voxel-cube__face--top {
-  transform: rotateX(90deg) translateZ(12px);
+  transform: rotateX(90deg) translateZ(var(--cube-half));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.12);
 }
 
 .voxel-cube__face--bottom {
-  transform: rotateX(-90deg) translateZ(12px);
+  transform: rotateX(-90deg) translateZ(var(--cube-half));
 }
 
 .voxel-cube--wall {
@@ -928,14 +936,15 @@
 }
 
 .voxel-cube--current {
-  transform: translateY(-8px);
   filter:
     drop-shadow(0 20px 22px rgba(0, 0, 0, 0.28))
     drop-shadow(0 0 18px rgba(255, 214, 96, 0.18));
 }
 
 .voxel-cube--current .voxel-cube__face--top {
-  box-shadow: inset 0 0 0 2px rgba(255, 244, 200, 0.28);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 244, 200, 0.28),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.12);
 }
 
 .slice-guide-notes__chips {
