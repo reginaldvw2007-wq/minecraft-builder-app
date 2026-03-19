@@ -576,6 +576,10 @@
   align-items: center;
 }
 
+.slice-guide-card__nav .ghost-button {
+  min-width: 108px;
+}
+
 .slice-guide-card__header h3,
 .slice-guide-notes__card h3 {
   margin: 0;
@@ -641,6 +645,16 @@
     linear-gradient(180deg, rgba(42, 77, 108, 0.5), rgba(10, 22, 29, 0.88));
 }
 
+.slice-orbit__hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .slice-orbit::after {
   content: '';
   position: absolute;
@@ -661,6 +675,9 @@
   width: 42px;
   height: 46px;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
 }
 
 .iso-block__face {
@@ -726,6 +743,17 @@
 
 .iso-block--highlight .iso-block__face--right {
   background: #ddb96f;
+}
+
+.iso-block--current {
+  transform: translateY(-6px);
+  filter:
+    drop-shadow(0 14px 16px rgba(0, 0, 0, 0.24))
+    drop-shadow(0 0 16px rgba(255, 223, 123, 0.16));
+}
+
+.iso-block--current .iso-block__face--top {
+  box-shadow: 0 0 0 2px rgba(255, 244, 200, 0.24);
 }
 
 .slice-guide-notes__chips {
@@ -1171,6 +1199,10 @@
 @media (max-width: 720px) {
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .slice-guide-card__nav .ghost-button {
+    min-width: 0;
   }
 
   .hotbar-strip {
