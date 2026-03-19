@@ -6,7 +6,9 @@ import {
   type ChangeEvent,
 } from 'react'
 import './App.css'
+import builderBadgeStrip from './assets/builder-badge-strip.svg'
 import captureQuestMap from './assets/capture-quest-map.svg'
+import revealCelebrationCard from './assets/reveal-celebration-card.svg'
 import voxelPocketScene from './assets/voxel-pocket-scene.svg'
 import {
   createDemoSources,
@@ -174,6 +176,34 @@ function buildDemoSlotSources() {
   return nextSlots
 }
 
+function getBuilderReward(photoCount: number) {
+  if (photoCount >= 8) {
+    return {
+      title: 'Legendary Scanner',
+      detail: 'All eight house angles locked in. This is the best kind of reveal.',
+    }
+  }
+
+  if (photoCount >= 6) {
+    return {
+      title: 'Build Hero',
+      detail: 'Bonus corner shots make the block shape feel stronger and more magical.',
+    }
+  }
+
+  if (photoCount >= 4) {
+    return {
+      title: 'Block Finder',
+      detail: 'You unlocked the Minecraft build reveal. Time to see the block shell.',
+    }
+  }
+
+  return {
+    title: 'Photo Scout',
+    detail: `${Math.max(MIN_RENDER_PHOTO_COUNT - photoCount, 0)} more photo${photoCount === 3 ? '' : 's'} to unlock the reveal.`,
+  }
+}
+
 function App() {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
@@ -203,6 +233,12 @@ function App() {
   const totalReferenceSize = sources.reduce((sum, source) => sum + source.sizeBytes, 0)
   const totalStacks = Math.ceil(plan.totalBlocks / 64)
   const canRender = sources.length >= MIN_RENDER_PHOTO_COUNT
+  const builderReward = getBuilderReward(sources.length)
+  const revealBadges = [
+    builderReward.title,
+    plan.themeProfile.tags[0] ?? plan.theme,
+    `${plan.stages.length} build stages`,
+  ]
   const quickBuildCards = [
     {
       label: 'Size',
@@ -439,9 +475,9 @@ function App() {
           </div>
           <p className="hero-summary">Take 4 to 8 house photos. We turn them into blocks.</p>
           <div className="hero-pill-row" aria-label="App promises">
-            <span>Phone first</span>
-            <span>Auto render</span>
-            <span>Kid easy</span>
+            <span>Scan it</span>
+            <span>Reveal it</span>
+            <span>Build it</span>
           </div>
         </div>
 
@@ -500,7 +536,7 @@ function App() {
               <h3>{activeMission.title}</h3>
               <p>{activeMission.hint}</p>
               <div className="capture-status-row">
-                <span>{Math.max(MIN_RENDER_PHOTO_COUNT - sources.length, 0)} left to start render</span>
+                <span>{Math.max(MIN_RENDER_PHOTO_COUNT - sources.length, 0)} left to unlock reveal</span>
                 <span>{Math.max(PHOTO_MISSIONS.length - sources.length, 0)} open slots</span>
               </div>
             </div>
@@ -520,6 +556,18 @@ function App() {
                   Start over
                 </button>
               ) : null}
+            </div>
+          </div>
+
+          <div className="reward-strip-card">
+            <img
+              src={builderBadgeStrip}
+              alt="Blocky builder badge strip showing progress toward the reveal."
+            />
+            <div className="reward-strip-card__copy">
+              <p className="section-kicker">Builder badge</p>
+              <h3>{builderReward.title}</h3>
+              <p>{builderReward.detail}</p>
             </div>
           </div>
 
@@ -600,7 +648,7 @@ function App() {
           ) : renderState === 'rendering' || isPending ? (
             <div className="rendering-card" data-testid="rendering-card">
               <p className="section-kicker">Working now</p>
-              <h3>Rendering your Minecraft build</h3>
+              <h3>Building your reveal</h3>
               <div className="render-step-list" aria-label="Rendering progress">
                 {RENDER_STEPS.map((step, index) => (
                   <div
@@ -615,6 +663,27 @@ function App() {
             </div>
           ) : (
             <div className="render-ready-stack">
+              <div className="reveal-banner">
+                <div className="reveal-banner__art">
+                  <img
+                    src={revealCelebrationCard}
+                    alt="Celebration card showing a bright voxel house reveal with reward blocks."
+                  />
+                </div>
+                <div className="reveal-banner__copy">
+                  <p className="section-kicker">Quest clear</p>
+                  <h3>{builderReward.title}</h3>
+                  <p>You just turned this house into a Minecraft build quest.</p>
+                  <div className="chip-row">
+                    {revealBadges.map((badge) => (
+                      <span key={badge} className="confidence-chip">
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="render-ready-card">
                 <div className="render-ready-card__header">
                   <div>
@@ -638,7 +707,7 @@ function App() {
                 </div>
                 <div className="render-ready-card__actions">
                   <button type="button" className="upload-button" onClick={() => setView('guide')}>
-                    Open Step-by-Step Guide
+                    Build It Now
                   </button>
                   <button type="button" className="ghost-button" onClick={() => setView('capture')}>
                     Add more photos
@@ -726,11 +795,40 @@ function App() {
           ) : (
             <>
               <div className="guide-header-card">
-                <div>
+                <div className="guide-header-card__copy">
                   <p className="section-kicker">Minecraft loadout</p>
                   <h3>{plan.theme}</h3>
+                  <div className="chip-row">
+                    {revealBadges.map((badge) => (
+                      <span key={badge} className="confidence-chip">
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="guide-header-card__art">
+                  <img
+                    src={builderBadgeStrip}
+                    alt="Builder badge strip showing a blocky progress path."
+                  />
                 </div>
                 <p>{plan.themeProfile.playstyle}</p>
+              </div>
+
+              <div className="replay-card">
+                <div>
+                  <p className="section-kicker">Do it again</p>
+                  <h3>Try another house after this one</h3>
+                  <p>When this build is done, reset and turn the next place into blocks too.</p>
+                </div>
+                <div className="secondary-actions">
+                  <button type="button" className="upload-button" onClick={clearSession}>
+                    Start Another Build
+                  </button>
+                  <button type="button" className="ghost-button" onClick={() => setView('render')}>
+                    Back to Reveal
+                  </button>
+                </div>
               </div>
 
               <div className="hotbar-strip">

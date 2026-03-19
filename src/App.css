@@ -278,10 +278,13 @@
 }
 
 .capture-hero-card,
+.reward-strip-card,
+.reveal-banner,
 .render-ready-card,
 .rendering-card,
 .empty-state-card,
 .guide-header-card,
+.replay-card,
 .skyline-card,
 .slice-card,
 .metric-card,
@@ -298,10 +301,13 @@
 }
 
 .capture-hero-card,
+.reward-strip-card,
+.reveal-banner,
 .render-ready-card,
 .rendering-card,
 .empty-state-card,
 .guide-header-card,
+.replay-card,
 .skyline-card,
 .slice-card {
   padding: 18px;
@@ -363,6 +369,42 @@
 .secondary-actions {
   display: grid;
   gap: 10px;
+}
+
+.reward-strip-card,
+.reveal-banner,
+.guide-header-card,
+.replay-card {
+  display: grid;
+  gap: 14px;
+}
+
+.reward-strip-card img,
+.guide-header-card__art img,
+.reveal-banner__art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.reward-strip-card__copy,
+.reveal-banner__copy,
+.guide-header-card__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.reward-strip-card__copy h3,
+.reveal-banner__copy h3,
+.replay-card h3 {
+  margin: 0;
+}
+
+.reward-strip-card__copy p,
+.reveal-banner__copy p,
+.replay-card p {
+  margin: 0;
 }
 
 .mission-grid {
@@ -511,6 +553,14 @@
 .render-ready-stack {
   display: grid;
   gap: 18px;
+}
+
+.reveal-banner {
+  border-color: rgba(230, 194, 126, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(255, 213, 107, 0.16), transparent 36%),
+    linear-gradient(180deg, rgba(125, 191, 255, 0.12), transparent),
+    rgba(8, 20, 24, 0.6);
 }
 
 .render-ready-card__header,
@@ -694,6 +744,20 @@
   color: var(--muted);
 }
 
+.guide-header-card__art {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 20, 24, 0.52);
+}
+
+.replay-card {
+  border-color: rgba(167, 222, 99, 0.24);
+  background:
+    radial-gradient(circle at top left, rgba(167, 222, 99, 0.12), transparent 35%),
+    rgba(8, 20, 24, 0.58);
+}
+
 .hotbar-strip {
   display: grid;
   grid-auto-flow: column;
@@ -864,6 +928,14 @@
 
   .capture-hero-card {
     grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+    align-items: center;
+  }
+
+  .reward-strip-card,
+  .reveal-banner,
+  .guide-header-card,
+  .replay-card {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 0.9fr);
     align-items: center;
   }
 

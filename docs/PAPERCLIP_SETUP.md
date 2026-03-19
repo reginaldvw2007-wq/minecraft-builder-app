@@ -72,3 +72,4 @@ Budget allocation:
 - `MIN-5` -> `docs/VERIFICATION_CRITERIA.md`, `docs/QA_PACKET_2026-03-17.md`
 - `MIN-6` -> `docs/SECURITY_BASELINE.md`, `docs/SECURITY_REVIEW_2026-03-17.md`
 - `MIN-7` -> `docs/CAPTURE_FLOW_HANDOFF_2026-03-18.md`
+- `MIN-8` -> `docs/TEST_RUN_READINESS_2026-03-19.md`
