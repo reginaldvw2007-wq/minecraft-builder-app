@@ -80,7 +80,19 @@ if [[ -z "${GUIDE_REF}" ]]; then
 fi
 
 "${PWCLI}" click "${GUIDE_REF}" >/dev/null
-"${PWCLI}" snapshot >/dev/null
+GUIDE_SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
+GUIDE_SNAPSHOT_PATH="$(printf '%s\n' "${GUIDE_SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"
+
+if [[ -z "${GUIDE_SNAPSHOT_PATH}" || ! -f "${ROOT_DIR}/${GUIDE_SNAPSHOT_PATH}" ]]; then
+  echo "Could not locate the guide snapshot output."
+  exit 1
+fi
+
+if ! rg 'Back a level|Next level|Drag to spin 360' "${ROOT_DIR}/${GUIDE_SNAPSHOT_PATH}" >/dev/null 2>&1; then
+  echo "Guide smoke check did not find the 3D viewer controls."
+  exit 1
+fi
+
 SCROLL_TOP_CODE="(async (page) => { await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(100); })"
 "${PWCLI}" run-code "${SCROLL_TOP_CODE}" >/dev/null
 SCREENSHOT_OUTPUT="$("${PWCLI}" screenshot)"
