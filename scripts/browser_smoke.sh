@@ -63,19 +63,19 @@ if [[ -z "${SNAPSHOT_PATH}" || ! -f "${ROOT_DIR}/${SNAPSHOT_PATH}" ]]; then
   exit 1
 fi
 
-if ! rg 'Open Step-by-Step Guide|Render ready' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
+if ! rg 'Build It Now|Render ready' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
   echo "Upload smoke check did not find the render-ready state."
   exit 1
 fi
 
 GUIDE_REF="$(
-  rg 'button "Open Step-by-Step Guide".*\[ref=' "${ROOT_DIR}/${SNAPSHOT_PATH}" \
+  rg 'button "Build It Now".*\[ref=' "${ROOT_DIR}/${SNAPSHOT_PATH}" \
     | sed -E 's/.*\[ref=([^]]+)\].*/\1/' \
     | head -n 1
 )"
 
 if [[ -z "${GUIDE_REF}" ]]; then
-  echo "Could not find the Open Step-by-Step Guide button ref in the snapshot."
+  echo "Could not find the Build It Now button ref in the snapshot."
   exit 1
 fi
 

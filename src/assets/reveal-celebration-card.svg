@@ -1,0 +1,112 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="600" y1="40" x2="600" y2="540" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#76c9ff"/>
+      <stop offset="0.52" stop-color="#66a8d9"/>
+      <stop offset="1" stop-color="#3d6178"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="600" y1="540" x2="600" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8d6b39"/>
+      <stop offset="1" stop-color="#553a1e"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="600" y1="220" x2="600" y2="720" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e8f4ff"/>
+      <stop offset="1" stop-color="#9ebfd3"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="600" y1="210" x2="600" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d8f67"/>
+      <stop offset="1" stop-color="#4d6d49"/>
+    </linearGradient>
+    <linearGradient id="door" x1="600" y1="460" x2="600" y2="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4b3e2d"/>
+      <stop offset="1" stop-color="#2a2117"/>
+    </linearGradient>
+    <filter id="shadow" x="160" y="160" width="880" height="600" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="12" flood-color="#12202a" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow" x="0" y="0" width="1200" height="900" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#f7e28b" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" rx="48" fill="#1d3442"/>
+  <rect x="28" y="28" width="1144" height="844" rx="40" fill="url(#sky)"/>
+
+  <g opacity="0.28">
+    <circle cx="170" cy="130" r="28" fill="#fff8cf"/>
+    <circle cx="250" cy="110" r="18" fill="#fff8cf"/>
+    <circle cx="330" cy="140" r="24" fill="#fff8cf"/>
+    <circle cx="900" cy="125" r="20" fill="#fff8cf"/>
+    <circle cx="980" cy="95" r="30" fill="#fff8cf"/>
+  </g>
+
+  <g opacity="0.18">
+    <rect x="60" y="72" width="78" height="16" rx="8" fill="#e7f5ff"/>
+    <rect x="1020" y="82" width="100" height="16" rx="8" fill="#e7f5ff"/>
+    <rect x="1060" y="110" width="56" height="16" rx="8" fill="#e7f5ff"/>
+  </g>
+
+  <path d="M28 548H1172V872H28V548Z" fill="url(#ground)"/>
+  <path d="M28 548H1172" stroke="#96c45b" stroke-width="12"/>
+  <path d="M28 568H1172" stroke="#43622d" stroke-width="10" opacity="0.55"/>
+
+  <g filter="url(#shadow)">
+    <rect x="340" y="240" width="520" height="360" rx="32" fill="url(#panel)"/>
+    <path d="M336 300L600 176L864 300V320H336V300Z" fill="url(#roof)"/>
+    <rect x="392" y="346" width="136" height="228" rx="20" fill="#d8e8ef"/>
+    <rect x="442" y="400" width="36" height="84" rx="10" fill="#7fa9bf"/>
+    <rect x="434" y="466" width="52" height="28" rx="8" fill="#587f92"/>
+    <rect x="548" y="372" width="154" height="202" rx="20" fill="#c7dbe3"/>
+    <rect x="602" y="438" width="44" height="116" rx="12" fill="url(#door)"/>
+    <rect x="734" y="346" width="72" height="228" rx="16" fill="#b9d0da"/>
+    <rect x="754" y="398" width="32" height="92" rx="10" fill="#7fa9bf"/>
+    <rect x="404" y="314" width="28" height="28" rx="7" fill="#f6d987"/>
+    <rect x="758" y="314" width="28" height="28" rx="7" fill="#f6d987"/>
+    <rect x="518" y="314" width="164" height="22" rx="11" fill="#7c9ba7"/>
+  </g>
+
+  <g opacity="0.95">
+    <rect x="274" y="620" width="652" height="122" rx="30" fill="#15232c" filter="url(#shadow)"/>
+    <g filter="url(#glow)">
+      <rect x="308" y="652" width="132" height="54" rx="16" fill="#e1b74a"/>
+      <rect x="452" y="652" width="132" height="54" rx="16" fill="#8bd66a"/>
+      <rect x="596" y="652" width="132" height="54" rx="16" fill="#f3d985"/>
+      <rect x="740" y="652" width="132" height="54" rx="16" fill="#7dc9ff"/>
+    </g>
+    <rect x="326" y="666" width="96" height="14" rx="7" fill="#182126"/>
+    <rect x="470" y="666" width="96" height="14" rx="7" fill="#182126"/>
+    <rect x="614" y="666" width="96" height="14" rx="7" fill="#182126"/>
+    <rect x="758" y="666" width="96" height="14" rx="7" fill="#182126"/>
+    <rect x="352" y="686" width="44" height="10" rx="5" fill="#182126"/>
+    <rect x="494" y="686" width="44" height="10" rx="5" fill="#182126"/>
+    <rect x="638" y="686" width="44" height="10" rx="5" fill="#182126"/>
+    <rect x="782" y="686" width="44" height="10" rx="5" fill="#182126"/>
+  </g>
+
+  <g>
+    <rect x="84" y="604" width="124" height="124" rx="24" fill="#20303a" filter="url(#shadow)"/>
+    <rect x="108" y="628" width="76" height="16" rx="8" fill="#f3d985"/>
+    <rect x="108" y="650" width="76" height="16" rx="8" fill="#8bd66a"/>
+    <rect x="108" y="672" width="76" height="16" rx="8" fill="#7dc9ff"/>
+    <rect x="108" y="694" width="76" height="16" rx="8" fill="#ef9f8f"/>
+    <g opacity="0.9">
+      <path d="M179 620L197 632L179 644L161 632L179 620Z" fill="#fff3b6"/>
+      <path d="M148 606L156 622L172 630L156 638L148 654L140 638L124 630L140 622L148 606Z" fill="#fff3b6"/>
+    </g>
+  </g>
+
+  <g>
+    <rect x="988" y="604" width="128" height="128" rx="24" fill="#20303a" filter="url(#shadow)"/>
+    <path d="M1018 650L1052 626L1086 650V684L1052 708L1018 684V650Z" fill="#d3b161"/>
+    <path d="M1052 626V708" stroke="#7f5c26" stroke-width="8" stroke-linecap="round"/>
+    <path d="M1018 650L1052 684L1086 650" stroke="#7f5c26" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M1018 684L1052 650L1086 684" stroke="#7f5c26" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g opacity="0.8">
+    <rect x="220" y="164" width="28" height="28" rx="8" fill="#ffd36b"/>
+    <rect x="944" y="184" width="22" height="22" rx="7" fill="#ffd36b"/>
+    <rect x="118" y="232" width="18" height="18" rx="5" fill="#8bd66a"/>
+    <rect x="1050" y="246" width="18" height="18" rx="5" fill="#8bd66a"/>
+  </g>
+</svg>
