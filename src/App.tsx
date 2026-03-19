@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type CSSProperties,
   type ChangeEvent,
 } from 'react'
 import './App.css'
@@ -13,6 +14,7 @@ import voxelPocketScene from './assets/voxel-pocket-scene.svg'
 import {
   createDemoSources,
   type BuildPlan,
+  type LayerCell,
   type LayerSlice,
   type ShotRole,
   type SourceImage,
@@ -117,6 +119,15 @@ const FILE_PREVIEW_TONES = [
 type SlotSource = SourceImage | null
 type AppView = 'capture' | 'render' | 'guide'
 type RenderState = 'idle' | 'rendering' | 'ready'
+type SliceRotation = 'front' | 'right' | 'back' | 'left'
+
+const SLICE_ROTATIONS: SliceRotation[] = ['front', 'right', 'back', 'left']
+const SLICE_ROTATION_LABELS: Record<SliceRotation, string> = {
+  front: 'Front',
+  right: 'Right',
+  back: 'Back',
+  left: 'Left',
+}
 
 function createEmptySlotSources(): SlotSource[] {
   return PHOTO_MISSIONS.map(() => null)
@@ -176,6 +187,69 @@ function buildDemoSlotSources() {
   return nextSlots
 }
 
+function rotateClockwise(grid: LayerCell[][]) {
+  const rowCount = grid.length
+  const columnCount = grid[0]?.length ?? 0
+
+  return Array.from({ length: columnCount }, (_, rowIndex) =>
+    Array.from({ length: rowCount }, (_, columnIndex) => grid[rowCount - 1 - columnIndex][rowIndex]),
+  )
+}
+
+function rotateLayerGrid(grid: LayerCell[][], rotation: SliceRotation) {
+  if (rotation === 'front') {
+    return grid
+  }
+
+  const firstTurn = rotateClockwise(grid)
+
+  if (rotation === 'right') {
+    return firstTurn
+  }
+
+  const secondTurn = rotateClockwise(firstTurn)
+
+  if (rotation === 'back') {
+    return secondTurn
+  }
+
+  return rotateClockwise(secondTurn)
+}
+
+function summarizeLayer(layer: LayerSlice) {
+  let wallCount = 0
+  let fillCount = 0
+  let highlightCount = 0
+
+  for (const row of layer.grid) {
+    for (const cell of row) {
+      if (cell === 'wall') {
+        wallCount += 1
+      } else if (cell === 'fill') {
+        fillCount += 1
+      } else if (cell === 'highlight') {
+        highlightCount += 1
+      }
+    }
+  }
+
+  const totalBlocks = wallCount + fillCount + highlightCount
+  const checklist = [
+    wallCount > 0 ? `Place ${wallCount} wall blocks first to lock the outline.` : null,
+    fillCount > 0 ? `Fill in ${fillCount} center blocks after the outline is stable.` : null,
+    highlightCount > 0 ? `Add ${highlightCount} accent blocks last for trims and openings.` : null,
+  ].filter(Boolean) as string[]
+
+  return {
+    wallCount,
+    fillCount,
+    highlightCount,
+    totalBlocks,
+    checklist,
+    footprint: `${layer.grid[0]?.length ?? 0} x ${layer.grid.length}`,
+  }
+}
+
 function getBuilderReward(photoCount: number) {
   if (photoCount >= 8) {
     return {
@@ -218,6 +292,7 @@ function App() {
   const [renderState, setRenderState] = useState<RenderState>('idle')
   const [renderStepIndex, setRenderStepIndex] = useState(0)
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
+  const [guideRotation, setGuideRotation] = useState<SliceRotation>('front')
   const [intakeNotice, setIntakeNotice] = useState('')
   const [exportNotice, setExportNotice] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -229,11 +304,16 @@ function App() {
   const activeMission = PHOTO_MISSIONS[activeSlotIndex]
   const activeLayer =
     plan.layers.find((layer) => layer.id === activeLayerId) ?? plan.layers[0]
+  const activeLayerIndex = Math.max(
+    plan.layers.findIndex((layer) => layer.id === activeLayer.id),
+    0,
+  )
   const usingDemo = sources.length > 0 && sources.every((source) => source.isDemo)
   const totalReferenceSize = sources.reduce((sum, source) => sum + source.sizeBytes, 0)
   const totalStacks = Math.ceil(plan.totalBlocks / 64)
   const canRender = sources.length >= MIN_RENDER_PHOTO_COUNT
   const builderReward = getBuilderReward(sources.length)
+  const activeLayerSummary = summarizeLayer(activeLayer)
   const revealBadges = [
     builderReward.title,
     plan.themeProfile.tags[0] ?? plan.theme,
@@ -426,6 +506,15 @@ function App() {
     setIntakeNotice('Demo house loaded.')
     setExportNotice('')
     runRender(nextSources)
+  }
+
+  function stepActiveLayer(direction: -1 | 1) {
+    const nextIndex = activeLayerIndex + direction
+    const nextLayer = plan.layers[nextIndex]
+
+    if (nextLayer) {
+      setActiveLayerId(nextLayer.id)
+    }
   }
 
   function exportJson() {
@@ -794,6 +883,87 @@ function App() {
             </div>
           ) : (
             <>
+              <div className="slice-guide-card">
+                <div className="slice-guide-card__header">
+                  <div>
+                    <p className="section-kicker">Slice by slice</p>
+                    <h3>{activeLayer.label}</h3>
+                    <p>{activeLayer.elevation} • {activeLayerSummary.totalBlocks} blocks in this slice</p>
+                  </div>
+                  <div className="slice-guide-card__nav">
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => stepActiveLayer(-1)}
+                      disabled={activeLayerIndex === 0}
+                    >
+                      Previous slice
+                    </button>
+                    <span className="progress-chip">
+                      {activeLayerIndex + 1} / {plan.layers.length}
+                    </span>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => stepActiveLayer(1)}
+                      disabled={activeLayerIndex === plan.layers.length - 1}
+                    >
+                      Next slice
+                    </button>
+                  </div>
+                </div>
+
+                <div className="slice-guide-card__layout">
+                  <div className="slice-orbit-card">
+                    <div className="slice-orbit-card__toolbar">
+                      <p className="section-kicker">Rotate this slice</p>
+                      <div className="slice-rotation-row" role="tablist" aria-label="Slice view directions">
+                        {SLICE_ROTATIONS.map((rotation) => (
+                          <button
+                            key={rotation}
+                            type="button"
+                            role="tab"
+                            className={`slice-rotation-button ${guideRotation === rotation ? 'slice-rotation-button--active' : ''}`}
+                            aria-selected={guideRotation === rotation}
+                            onClick={() => setGuideRotation(rotation)}
+                          >
+                            {SLICE_ROTATION_LABELS[rotation]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <SliceOrbitPreview layer={activeLayer} rotation={guideRotation} />
+                  </div>
+
+                  <div className="slice-guide-notes">
+                    <div className="slice-guide-notes__chips">
+                      <span className="confidence-chip">{activeLayerSummary.footprint} footprint</span>
+                      <span className="confidence-chip confidence-chip--muted">
+                        {activeLayerSummary.wallCount} wall
+                      </span>
+                      <span className="confidence-chip confidence-chip--muted">
+                        {activeLayerSummary.fillCount} fill
+                      </span>
+                      <span className="confidence-chip confidence-chip--muted">
+                        {activeLayerSummary.highlightCount} accent
+                      </span>
+                    </div>
+
+                    <div className="slice-guide-notes__card">
+                      <p className="section-kicker">{SLICE_ROTATION_LABELS[guideRotation]} view</p>
+                      <h3>Build this layer in order</h3>
+                      <ul className="stage-list">
+                        {activeLayerSummary.checklist.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                      <p className="slice-guide-notes__summary">{activeLayer.summary}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="guide-header-card">
                 <div className="guide-header-card__copy">
                   <p className="section-kicker">Minecraft loadout</p>
@@ -964,6 +1134,87 @@ function LayerPreview({ layer, width }: LayerPreviewProps) {
         </span>
       </div>
     </>
+  )
+}
+
+type SliceOrbitPreviewProps = {
+  layer: LayerSlice
+  rotation: SliceRotation
+}
+
+function SliceOrbitPreview({ layer, rotation }: SliceOrbitPreviewProps) {
+  const rotatedGrid = rotateLayerGrid(layer.grid, rotation)
+  const tileWidth = 42
+  const tileHeight = 22
+  const blockDepth = 22
+  const halfTileWidth = tileWidth / 2
+  const halfTileHeight = tileHeight / 2
+
+  const blocks = rotatedGrid.flatMap((row, rowIndex) =>
+    row.flatMap((cell, columnIndex) => {
+      if (cell === 'empty') {
+        return []
+      }
+
+      const isoLeft = (columnIndex - rowIndex) * halfTileWidth
+      const isoTop = (columnIndex + rowIndex) * halfTileHeight
+
+      return [
+        {
+          id: `${rowIndex}-${columnIndex}-${cell}`,
+          cell,
+          isoLeft,
+          isoTop,
+        },
+      ]
+    }),
+  )
+
+  if (blocks.length === 0) {
+    return (
+      <div className="slice-orbit">
+        <p className="status-note">This slice is empty.</p>
+      </div>
+    )
+  }
+
+  const minLeft = Math.min(...blocks.map((block) => block.isoLeft))
+  const maxLeft = Math.max(...blocks.map((block) => block.isoLeft))
+  const minTop = Math.min(...blocks.map((block) => block.isoTop))
+  const maxTop = Math.max(...blocks.map((block) => block.isoTop))
+  const stageWidth = maxLeft - minLeft + tileWidth + 64
+  const stageHeight = maxTop - minTop + tileHeight + blockDepth + 72
+
+  return (
+    <div className="slice-orbit" aria-label={`${layer.label} ${rotation} 3D slice preview`}>
+      <div
+        className="slice-orbit__stage"
+        style={
+          {
+            width: `${stageWidth}px`,
+            height: `${stageHeight}px`,
+          } as CSSProperties
+        }
+      >
+        {blocks.map((block) => (
+          <div
+            key={block.id}
+            className={`iso-block iso-block--${block.cell}`}
+            style={
+              {
+                left: `${block.isoLeft - minLeft + 24}px`,
+                top: `${block.isoTop - minTop + 12}px`,
+              } as CSSProperties
+            }
+            title={`${layer.label}: ${block.cell}`}
+          >
+            <span className="iso-block__face iso-block__face--top" />
+            <span className="iso-block__face iso-block__face--left" />
+            <span className="iso-block__face iso-block__face--right" />
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
