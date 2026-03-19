@@ -284,6 +284,7 @@
 .rendering-card,
 .empty-state-card,
 .guide-header-card,
+.slice-guide-card,
 .replay-card,
 .skyline-card,
 .slice-card,
@@ -307,6 +308,7 @@
 .rendering-card,
 .empty-state-card,
 .guide-header-card,
+.slice-guide-card,
 .replay-card,
 .skyline-card,
 .slice-card {
@@ -553,6 +555,196 @@
 .render-ready-stack {
   display: grid;
   gap: 18px;
+}
+
+.slice-guide-card {
+  display: grid;
+  gap: 16px;
+}
+
+.slice-guide-card__header,
+.slice-guide-card__nav,
+.slice-guide-card__layout,
+.slice-guide-notes,
+.slice-orbit-card,
+.slice-orbit-card__toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.slice-guide-card__nav {
+  align-items: center;
+}
+
+.slice-guide-card__header h3,
+.slice-guide-notes__card h3 {
+  margin: 0;
+}
+
+.slice-guide-card__header p,
+.slice-guide-notes__card p {
+  margin: 0;
+}
+
+.slice-rotation-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slice-rotation-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font: inherit;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.slice-rotation-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.slice-rotation-button--active {
+  background: rgba(167, 222, 99, 0.16);
+  color: var(--ink);
+  border-color: rgba(167, 222, 99, 0.24);
+}
+
+.slice-orbit-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(125, 191, 255, 0.12), transparent 36%),
+    rgba(8, 20, 24, 0.56);
+}
+
+.slice-orbit {
+  position: relative;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(193, 233, 255, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(42, 77, 108, 0.5), rgba(10, 22, 29, 0.88));
+}
+
+.slice-orbit::after {
+  content: '';
+  position: absolute;
+  inset: auto 12% 10% 12%;
+  height: 22%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.45), transparent 70%);
+  filter: blur(18px);
+}
+
+.slice-orbit__stage {
+  position: relative;
+  z-index: 1;
+}
+
+.iso-block {
+  position: absolute;
+  width: 42px;
+  height: 46px;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
+}
+
+.iso-block__face {
+  position: absolute;
+  display: block;
+}
+
+.iso-block__face--top {
+  top: 0;
+  left: 0;
+  width: 42px;
+  height: 22px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.iso-block__face--left {
+  top: 18px;
+  left: 0;
+  width: 21px;
+  height: 24px;
+  clip-path: polygon(100% 0, 100% 100%, 0 72%, 0 18%);
+}
+
+.iso-block__face--right {
+  top: 18px;
+  right: 0;
+  width: 21px;
+  height: 24px;
+  clip-path: polygon(0 0, 100% 18%, 100% 72%, 0 100%);
+}
+
+.iso-block--wall .iso-block__face--top {
+  background: #d6b17a;
+}
+
+.iso-block--wall .iso-block__face--left {
+  background: #9f7b49;
+}
+
+.iso-block--wall .iso-block__face--right {
+  background: #ba955f;
+}
+
+.iso-block--fill .iso-block__face--top {
+  background: #7a8f6f;
+}
+
+.iso-block--fill .iso-block__face--left {
+  background: #55644d;
+}
+
+.iso-block--fill .iso-block__face--right {
+  background: #66785b;
+}
+
+.iso-block--highlight .iso-block__face--top {
+  background: #f6d990;
+}
+
+.iso-block--highlight .iso-block__face--left {
+  background: #caa75c;
+}
+
+.iso-block--highlight .iso-block__face--right {
+  background: #ddb96f;
+}
+
+.slice-guide-notes__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slice-guide-notes__card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 20, 24, 0.5);
+}
+
+.slice-guide-notes__summary {
+  color: var(--muted);
 }
 
 .reveal-banner {
@@ -918,6 +1110,7 @@
 
   .section-heading,
   .render-ready-card__header,
+  .slice-guide-card__header,
   .skyline-header,
   .slice-header,
   .stage-header {
@@ -934,9 +1127,15 @@
   .reward-strip-card,
   .reveal-banner,
   .guide-header-card,
+  .slice-guide-card__layout,
   .replay-card {
     grid-template-columns: minmax(0, 1fr) minmax(240px, 0.9fr);
     align-items: center;
+  }
+
+  .slice-guide-card__nav {
+    grid-template-columns: repeat(3, auto);
+    justify-content: end;
   }
 
   .render-ready-card__actions,
