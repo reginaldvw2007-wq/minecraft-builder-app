@@ -886,9 +886,9 @@ function App() {
               <div className="slice-guide-card">
                 <div className="slice-guide-card__header">
                   <div>
-                    <p className="section-kicker">Slice by slice</p>
+                    <p className="section-kicker">Build the house upward</p>
                     <h3>{activeLayer.label}</h3>
-                    <p>{activeLayer.elevation} • {activeLayerSummary.totalBlocks} blocks in this slice</p>
+                    <p>Show the house up through {activeLayer.elevation.toLowerCase()}.</p>
                   </div>
                   <div className="slice-guide-card__nav">
                     <button
@@ -897,7 +897,7 @@ function App() {
                       onClick={() => stepActiveLayer(-1)}
                       disabled={activeLayerIndex === 0}
                     >
-                      Previous slice
+                      ← Lower
                     </button>
                     <span className="progress-chip">
                       {activeLayerIndex + 1} / {plan.layers.length}
@@ -908,7 +908,7 @@ function App() {
                       onClick={() => stepActiveLayer(1)}
                       disabled={activeLayerIndex === plan.layers.length - 1}
                     >
-                      Next slice
+                      Raise →
                     </button>
                   </div>
                 </div>
@@ -916,8 +916,8 @@ function App() {
                 <div className="slice-guide-card__layout">
                   <div className="slice-orbit-card">
                     <div className="slice-orbit-card__toolbar">
-                      <p className="section-kicker">Rotate this slice</p>
-                      <div className="slice-rotation-row" role="tablist" aria-label="Slice view directions">
+                      <p className="section-kicker">Rotate the house</p>
+                      <div className="slice-rotation-row" role="tablist" aria-label="House view directions">
                         {SLICE_ROTATIONS.map((rotation) => (
                           <button
                             key={rotation}
@@ -933,7 +933,11 @@ function App() {
                       </div>
                     </div>
 
-                    <SliceOrbitPreview layer={activeLayer} rotation={guideRotation} />
+                    <HouseBuildPreview
+                      layers={plan.layers}
+                      visibleLayerCount={activeLayerIndex + 1}
+                      rotation={guideRotation}
+                    />
                   </div>
 
                   <div className="slice-guide-notes">
@@ -952,7 +956,7 @@ function App() {
 
                     <div className="slice-guide-notes__card">
                       <p className="section-kicker">{SLICE_ROTATION_LABELS[guideRotation]} view</p>
-                      <h3>Build this layer in order</h3>
+                      <h3>Current top layer</h3>
                       <ul className="stage-list">
                         {activeLayerSummary.checklist.map((item) => (
                           <li key={item}>{item}</li>
@@ -1137,38 +1141,53 @@ function LayerPreview({ layer, width }: LayerPreviewProps) {
   )
 }
 
-type SliceOrbitPreviewProps = {
-  layer: LayerSlice
+type HouseBuildPreviewProps = {
+  layers: LayerSlice[]
+  visibleLayerCount: number
   rotation: SliceRotation
 }
 
-function SliceOrbitPreview({ layer, rotation }: SliceOrbitPreviewProps) {
-  const rotatedGrid = rotateLayerGrid(layer.grid, rotation)
+function HouseBuildPreview({
+  layers,
+  visibleLayerCount,
+  rotation,
+}: HouseBuildPreviewProps) {
   const tileWidth = 42
   const tileHeight = 22
-  const blockDepth = 22
+  const blockDepth = 24
   const halfTileWidth = tileWidth / 2
   const halfTileHeight = tileHeight / 2
 
-  const blocks = rotatedGrid.flatMap((row, rowIndex) =>
-    row.flatMap((cell, columnIndex) => {
-      if (cell === 'empty') {
-        return []
-      }
+  const visibleLayers = layers.slice(0, visibleLayerCount)
+  const activeTopLayer = visibleLayers.at(-1)
+  const blocks = visibleLayers
+    .flatMap((layer, layerIndex) => {
+      const rotatedGrid = rotateLayerGrid(layer.grid, rotation)
 
-      const isoLeft = (columnIndex - rowIndex) * halfTileWidth
-      const isoTop = (columnIndex + rowIndex) * halfTileHeight
+      return rotatedGrid.flatMap((row, rowIndex) =>
+        row.flatMap((cell, columnIndex) => {
+          if (cell === 'empty') {
+            return []
+          }
 
-      return [
-        {
-          id: `${rowIndex}-${columnIndex}-${cell}`,
-          cell,
-          isoLeft,
-          isoTop,
-        },
-      ]
-    }),
-  )
+          const isoLeft = (columnIndex - rowIndex) * halfTileWidth
+          const isoTop = (columnIndex + rowIndex) * halfTileHeight - layerIndex * blockDepth
+
+          return [
+            {
+              id: `${layer.id}-${rowIndex}-${columnIndex}-${cell}`,
+              cell,
+              isoLeft,
+              isoTop,
+              isCurrent: layerIndex === visibleLayers.length - 1,
+              layerLabel: layer.label,
+              paintOrder: rowIndex + columnIndex + layerIndex,
+            },
+          ]
+        }),
+      )
+    })
+    .sort((left, right) => left.paintOrder - right.paintOrder)
 
   if (blocks.length === 0) {
     return (
@@ -1186,7 +1205,15 @@ function SliceOrbitPreview({ layer, rotation }: SliceOrbitPreviewProps) {
   const stageHeight = maxTop - minTop + tileHeight + blockDepth + 72
 
   return (
-    <div className="slice-orbit" aria-label={`${layer.label} ${rotation} 3D slice preview`}>
+    <div className="slice-orbit" aria-label={`${rotation} 3D house preview through layer ${visibleLayerCount}`}>
+      <div className="slice-orbit__hud">
+        <span className="progress-chip">
+          Layer {visibleLayerCount} / {layers.length}
+        </span>
+        {activeTopLayer ? (
+          <span className="confidence-chip confidence-chip--muted">{activeTopLayer.label}</span>
+        ) : null}
+      </div>
       <div
         className="slice-orbit__stage"
         style={
@@ -1199,14 +1226,14 @@ function SliceOrbitPreview({ layer, rotation }: SliceOrbitPreviewProps) {
         {blocks.map((block) => (
           <div
             key={block.id}
-            className={`iso-block iso-block--${block.cell}`}
+            className={`iso-block iso-block--${block.cell} ${block.isCurrent ? 'iso-block--current' : ''}`}
             style={
               {
                 left: `${block.isoLeft - minLeft + 24}px`,
                 top: `${block.isoTop - minTop + 12}px`,
               } as CSSProperties
             }
-            title={`${layer.label}: ${block.cell}`}
+            title={`${block.layerLabel}: ${block.cell}`}
           >
             <span className="iso-block__face iso-block__face--top" />
             <span className="iso-block__face iso-block__face--left" />
