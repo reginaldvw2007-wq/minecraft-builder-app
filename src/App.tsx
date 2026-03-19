@@ -126,6 +126,14 @@ function createEmptySlotSources(): SlotSource[] {
   return PHOTO_MISSIONS.map(() => null)
 }
 
+function getGuideStartingLayerIndex(layerCount: number) {
+  if (layerCount <= 4) {
+    return Math.max(layerCount - 1, 0)
+  }
+
+  return Math.min(Math.max(Math.round(layerCount * 0.38), 3), layerCount - 2)
+}
+
 function formatBytes(sizeBytes: number) {
   if (sizeBytes >= 1_000_000) {
     return `${(sizeBytes / 1_000_000).toFixed(1)} MB`
@@ -254,7 +262,11 @@ function App() {
 
   const [slotSources, setSlotSources] = useState<SlotSource[]>(createEmptySlotSources)
   const [plan, setPlan] = useState<BuildPlan>(INITIAL_PLAN)
-  const [activeLayerId, setActiveLayerId] = useState(INITIAL_PLAN.layers[0]?.id ?? '')
+  const [activeLayerId, setActiveLayerId] = useState(
+    INITIAL_PLAN.layers[getGuideStartingLayerIndex(INITIAL_PLAN.layers.length)]?.id ??
+      INITIAL_PLAN.layers[0]?.id ??
+      '',
+  )
   const [analysisWarnings, setAnalysisWarnings] = useState<string[]>([])
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(INITIAL_ANALYSIS.mode)
   const [view, setView] = useState<AppView>('capture')
@@ -353,7 +365,11 @@ function App() {
         setPlan(nextAnalysis.plan)
         setAnalysisWarnings(nextAnalysis.warnings)
         setAnalysisMode(nextAnalysis.mode)
-        setActiveLayerId(nextAnalysis.plan.layers[0]?.id ?? '')
+        setActiveLayerId(
+          nextAnalysis.plan.layers[getGuideStartingLayerIndex(nextAnalysis.plan.layers.length)]?.id ??
+            nextAnalysis.plan.layers[0]?.id ??
+            '',
+        )
         setRenderState('ready')
       })
     }, 1280)
@@ -1121,6 +1137,11 @@ function clampAngle(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
+const VIEW_HOME_YAW = -28
+const VIEW_HOME_PITCH = 26
+const VIEW_MIN_PITCH = 18
+const VIEW_MAX_PITCH = 56
+
 function HouseBuildViewer({
   layers,
   visibleLayerCount,
@@ -1129,10 +1150,11 @@ function HouseBuildViewer({
   canLower,
   canRaise,
 }: HouseBuildViewerProps) {
-  const blockSize = 24
+  const cubeSize = 22
+  const cubeStep = 24
   const dragStateRef = useRef<DragState | null>(null)
-  const [yaw, setYaw] = useState(-42)
-  const [pitch, setPitch] = useState(58)
+  const [yaw, setYaw] = useState(VIEW_HOME_YAW)
+  const [pitch, setPitch] = useState(VIEW_HOME_PITCH)
   const [isDragging, setIsDragging] = useState(false)
   const visibleLayers = layers.slice(0, visibleLayerCount)
   const activeTopLayer = visibleLayers.at(-1)
@@ -1181,15 +1203,15 @@ function HouseBuildViewer({
               cell,
               layerLabel: layer.label,
               isCurrent: layerIndex === visibleLayers.length - 1,
-              x: (columnIndex - (width - 1) / 2) * blockSize,
-              y: -(layerIndex * blockSize),
-              z: (rowIndex - (depth - 1) / 2) * blockSize,
+              x: (columnIndex - (width - 1) / 2) * cubeStep,
+              y: -(layerIndex * cubeStep),
+              z: (rowIndex - (depth - 1) / 2) * cubeStep,
             },
           ]
         }),
       ),
     )
-  }, [blockSize, depth, visibleLayers, width])
+  }, [cubeStep, depth, visibleLayers, width])
 
   if (blocks.length === 0 || width === 0 || depth === 0) {
     return (
@@ -1199,13 +1221,13 @@ function HouseBuildViewer({
     )
   }
 
-  const viewerScale = clampAngle(8.4 / Math.max(width, depth, visibleLayerCount * 1.05), 0.34, 0.88)
-  const groundWidth = width * blockSize * 1.2
-  const groundDepth = depth * blockSize * 1.2
+  const viewerScale = clampAngle(8.8 / Math.max(width, depth, visibleLayerCount * 1.05), 0.38, 0.94)
+  const groundWidth = width * cubeStep * 1.18
+  const groundDepth = depth * cubeStep * 1.18
 
   function resetView() {
-    setYaw(-42)
-    setPitch(58)
+    setYaw(VIEW_HOME_YAW)
+    setPitch(VIEW_HOME_PITCH)
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1227,11 +1249,11 @@ function HouseBuildViewer({
       return
     }
 
-    const yawDelta = (event.clientX - dragState.startX) * 0.45
-    const pitchDelta = (event.clientY - dragState.startY) * 0.32
+    const yawDelta = (event.clientX - dragState.startX) * 0.34
+    const pitchDelta = (event.clientY - dragState.startY) * 0.18
 
     setYaw(dragState.startYaw + yawDelta)
-    setPitch(clampAngle(dragState.startPitch - pitchDelta, 20, 78))
+    setPitch(clampAngle(dragState.startPitch - pitchDelta, VIEW_MIN_PITCH, VIEW_MAX_PITCH))
   }
 
   function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1252,12 +1274,12 @@ function HouseBuildViewer({
           <span className="confidence-chip confidence-chip--muted">{activeTopLayer.label}</span>
         ) : null}
         <button type="button" className="slice-orbit__reset" onClick={resetView}>
-          Reset view
+          Front view
         </button>
       </div>
 
       <div className="slice-orbit__prompt">
-        <span>{isDragging ? 'Spinning...' : 'Drag to spin 360°'}</span>
+        <span>{isDragging ? 'Looking around...' : 'Drag to look all around'}</span>
       </div>
 
       <div
@@ -1274,7 +1296,7 @@ function HouseBuildViewer({
               '--viewer-scale': viewerScale,
               '--viewer-yaw': `${yaw}deg`,
               '--viewer-pitch': `${pitch}deg`,
-              '--viewer-lift': `${visibleLayerCount * blockSize * 0.32}px`,
+              '--viewer-lift': `${visibleLayerCount * cubeStep * 0.22}px`,
             } as CSSProperties
           }
         >
@@ -1297,8 +1319,9 @@ function HouseBuildViewer({
                     transform: `translate3d(${block.x}px, ${block.y}px, ${block.z}px)${
                       block.isCurrent ? ' translateY(-4px)' : ''
                     }`,
-                    width: `${blockSize}px`,
-                    height: `${blockSize}px`,
+                    width: `${cubeSize}px`,
+                    height: `${cubeSize}px`,
+                    '--cube-half': `${cubeSize / 2}px`,
                   } as CSSProperties
                 }
                 title={`${block.layerLabel}: ${block.cell}`}
