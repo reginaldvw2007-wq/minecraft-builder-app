@@ -34,12 +34,17 @@ function createWarehouseSources(): SourceImage[] {
 describe('buildPlanFromSources', () => {
   it('creates a stable plan shape from the demo sources', () => {
     const plan = buildPlanFromSources(createDemoSources())
+    const roofLayerCount = plan.layers.filter((layer) =>
+      layer.grid.some((row) => row.some((cell) => cell === 'roof')),
+    ).length
 
     expect(plan.structureName).toContain('Harbor Workshop')
-    expect(plan.layers).toHaveLength(4)
+    expect(plan.layers.length).toBe(plan.dimensions.height)
     expect(plan.palette).toHaveLength(5)
     expect(plan.stages).toHaveLength(4)
     expect(plan.dimensions.width).toBeGreaterThanOrEqual(12)
+    expect(roofLayerCount).toBeGreaterThan(0)
+    expect(plan.layers.at(-1)?.label.toLowerCase()).toContain('roof')
   })
 
   it('derives a readable structure name from custom source names', () => {

@@ -27,7 +27,7 @@ export type Insight = {
   detail: string
 }
 
-export type LayerCell = 'empty' | 'wall' | 'fill' | 'highlight'
+export type LayerCell = 'empty' | 'wall' | 'fill' | 'highlight' | 'roof'
 
 export type LayerSlice = {
   id: string
@@ -310,15 +310,36 @@ function buildSkyline(
   })
 }
 
+function getRoofProfile(height: number, roofline: string) {
+  const roofHeight =
+    roofline === 'Gabled' ? clamp(Math.round(height * 0.28), 3, 5) : roofline === 'Stepped' ? clamp(Math.round(height * 0.22), 2, 4) : 2
+  const roofStart = Math.max(3, height - roofHeight)
+
+  return {
+    roofHeight,
+    roofStart,
+  }
+}
+
 function buildLayerGrid(
-  kind: LayerSlice['id'],
+  levelIndex: number,
   width: number,
   depth: number,
+  height: number,
   roofline: string,
+  floors: number,
   seed: number,
 ) {
   const center = Math.floor(width / 2)
   const doorHalfWidth = width >= 18 ? 1 : 0
+  const { roofStart, roofHeight } = getRoofProfile(height, roofline)
+  const windowBands = new Set(
+    [
+      Math.max(2, Math.round(roofStart * 0.34)),
+      Math.max(3, Math.round(roofStart * 0.62)),
+    ].filter((band) => band > 0 && band < roofStart - 1),
+  )
+  const loftBand = floors > 1 ? Math.max(2, Math.round((roofStart - 1) * 0.52)) : -1
 
   return Array.from({ length: depth }, (_, y) =>
     Array.from({ length: width }, (_, x) => {
@@ -330,7 +351,7 @@ function buildLayerGrid(
         (x < 2 && y >= depth - 2) ||
         (x >= width - 2 && y >= depth - 2)
       const frontEntry =
-        y === 0 && x >= center - doorHalfWidth && x <= center + doorHalfWidth
+        y === 0 && x >= center - doorHalfWidth && x <= center + doorHalfWidth && levelIndex <= 2
       const supportPost =
         x > 2 &&
         x < width - 3 &&
@@ -338,25 +359,44 @@ function buildLayerGrid(
         y < depth - 3 &&
         ((x + y) % 5 === 0 || hash3(seed, x, y) > 0.92)
 
-      if (kind === 'foundation') {
+      if (levelIndex === 0) {
+        if (frontEntry) {
+          return 'highlight'
+        }
         if (cornerTower) {
           return 'highlight'
         }
         if (border || innerRing || supportPost) {
           return 'fill'
         }
-        return hash3(seed, x, y) > 0.88 ? 'fill' : 'empty'
+        return hash3(seed, x, y) > 0.82 ? 'highlight' : 'fill'
       }
 
-      if (kind === 'lower-shell') {
+      if (levelIndex < roofStart) {
         if (frontEntry) {
           return 'empty'
         }
         if (cornerTower) {
-          return 'highlight'
+          return levelIndex % 2 === 0 ? 'highlight' : 'wall'
         }
         if (border) {
-          return 'wall'
+          const frontOrBackWindow =
+            (y === 0 || y === depth - 1) &&
+            x > 2 &&
+            x < width - 3 &&
+            x % 3 !== 0
+          const sideWindow =
+            (x === 0 || x === width - 1) &&
+            y > 2 &&
+            y < depth - 3 &&
+            y % 3 !== 0
+          const shouldOpenWindow =
+            windowBands.has(levelIndex) && (frontOrBackWindow || sideWindow)
+
+          return shouldOpenWindow && hash3(seed, x, y, levelIndex) > 0.2 ? 'empty' : 'wall'
+        }
+        if (levelIndex === loftBand && x > 1 && x < width - 2 && y > 1 && y < depth - 2) {
+          return 'fill'
         }
         if (supportPost) {
           return 'fill'
@@ -364,41 +404,108 @@ function buildLayerGrid(
         return 'empty'
       }
 
-      if (kind === 'upper-shell') {
-        if (cornerTower) {
-          return 'highlight'
-        }
-        if (border) {
-          return hash3(seed, x, y, 4) > 0.2 ? 'wall' : 'empty'
-        }
-        if (x === center || x === center - 1) {
-          return 'fill'
-        }
-        return hash3(seed, x, y, 8) > 0.95 ? 'fill' : 'empty'
-      }
-
-      if (cornerTower) {
-        return 'highlight'
-      }
+      const roofLevel = levelIndex - roofStart
 
       if (roofline === 'Gabled') {
-        const ridgeSpread = Math.max(1, Math.round(width / 5))
-        if (Math.abs(x - center) <= ridgeSpread && y > 0 && y < depth - 1) {
-          return 'fill'
+        const inset = roofLevel
+
+        if (x < inset || x >= width - inset) {
+          return 'empty'
         }
+
+        if (y === 0 || y === depth - 1) {
+          return x === inset || x === width - 1 - inset ? 'highlight' : 'roof'
+        }
+
+        const roofEdge = x === inset || x === width - 1 - inset
+        const ridgeWidth = width - inset * 2
+
+        if (roofEdge) {
+          return 'roof'
+        }
+
+        if (ridgeWidth <= 2) {
+          return y % 4 === 0 ? 'highlight' : 'roof'
+        }
+
+        return hash3(seed, x, y, levelIndex) > 0.1 ? 'roof' : 'empty'
       }
 
-      if (roofline === 'Stepped' && innerRing) {
-        return 'fill'
+      if (roofline === 'Stepped') {
+        const inset = roofLevel
+
+        if (x < inset || x >= width - inset || y < inset || y >= depth - inset) {
+          return 'empty'
+        }
+
+        const terraceEdge =
+          x === inset || x === width - 1 - inset || y === inset || y === depth - 1 - inset
+
+        if (terraceEdge) {
+          return roofLevel === roofHeight - 1 || cornerTower ? 'highlight' : 'roof'
+        }
+
+        return roofLevel === roofHeight - 1 && innerRing ? 'highlight' : 'roof'
       }
 
-      if (roofline === 'Parapet' && border) {
-        return 'wall'
+      if (border) {
+        return levelIndex === roofStart ? 'wall' : 'roof'
       }
 
-      return border ? 'wall' : hash3(seed, x, y, 12) > 0.9 ? 'fill' : 'empty'
+      if (levelIndex === roofStart) {
+        return hash3(seed, x, y, 12) > 0.14 ? 'fill' : 'empty'
+      }
+
+      return levelIndex === height - 1 && hash3(seed, x, y, levelIndex) > 0.72
+        ? 'highlight'
+        : hash3(seed, x, y, levelIndex) > 0.9
+          ? 'roof'
+          : 'empty'
     }),
   )
+}
+
+function describeLayer(levelIndex: number, height: number, roofline: string) {
+  const { roofStart } = getRoofProfile(height, roofline)
+  const roofLevel = levelIndex - roofStart + 1
+
+  if (levelIndex === 0) {
+    return {
+      label: 'Foundation',
+      elevation: 'Layer 1',
+      summary: 'Set the footprint, floor fill, and front-step anchor.',
+    }
+  }
+
+  if (levelIndex < roofStart) {
+    const bandLabel =
+      levelIndex === 1 ? 'Door band' : levelIndex === roofStart - 1 ? 'Top wall band' : `Wall layer ${levelIndex + 1}`
+
+    return {
+      label: bandLabel,
+      elevation: `Layer ${levelIndex + 1}`,
+      summary:
+        levelIndex === 1
+          ? 'Keep the entry open while you raise the first wall ring.'
+          : levelIndex % 2 === 0
+            ? 'Continue the shell and line up windows and trims.'
+            : 'Carry the wall ring and interior supports upward.',
+    }
+  }
+
+  if (levelIndex === height - 1) {
+    return {
+      label: 'Roof peak',
+      elevation: `Layer ${levelIndex + 1}`,
+      summary: `Finish the ${roofline.toLowerCase()} cap and lock the top silhouette.`,
+    }
+  }
+
+  return {
+    label: `Roof ${roofLevel}`,
+    elevation: `Layer ${levelIndex + 1}`,
+    summary: `${roofline} roof pass ${roofLevel} steps inward to shape the top profile.`,
+  }
 }
 
 export function createDemoSources() {
@@ -464,36 +571,17 @@ export function buildPlanFromSources(inputSources: SourceImage[]): BuildPlan {
     },
   ]
 
-  const layers: LayerSlice[] = [
-    {
-      id: 'foundation',
-      label: 'Foundation',
-      elevation: 'Layer 0-1',
-      summary: 'Solid pad, corner anchors, and interior supports.',
-      grid: buildLayerGrid('foundation', width, depth, roofline, seed),
-    },
-    {
-      id: 'lower-shell',
-      label: 'Lower Shell',
-      elevation: `Layer ${Math.max(2, Math.round(height * 0.28))}`,
-      summary: 'Main doorway opening and first pass wall silhouette.',
-      grid: buildLayerGrid('lower-shell', width, depth, roofline, seed),
-    },
-    {
-      id: 'upper-shell',
-      label: 'Upper Shell',
-      elevation: `Layer ${Math.max(4, Math.round(height * 0.6))}`,
-      summary: 'Window rhythm, support spine, and trim band alignment.',
-      grid: buildLayerGrid('upper-shell', width, depth, roofline, seed),
-    },
-    {
-      id: 'roofline',
-      label: 'Roofline',
-      elevation: `Layer ${height}`,
-      summary: `${roofline} cap used to lock the silhouette before detailing.`,
-      grid: buildLayerGrid('roofline', width, depth, roofline, seed),
-    },
-  ]
+  const layers: LayerSlice[] = Array.from({ length: height }, (_, levelIndex) => {
+    const description = describeLayer(levelIndex, height, roofline)
+
+    return {
+      id: `layer-${levelIndex + 1}`,
+      label: description.label,
+      elevation: description.elevation,
+      summary: description.summary,
+      grid: buildLayerGrid(levelIndex, width, depth, height, roofline, floors, seed),
+    }
+  })
 
   const skyline = buildSkyline(width, height, roofline, seed)
 
