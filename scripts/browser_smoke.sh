@@ -53,7 +53,7 @@ fi
 
 "${PWCLI}" close-all >/dev/null 2>&1 || true
 "${PWCLI}" open "${BASE_URL}" >/dev/null
-UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"library-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\", \"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByText(\"Drag to spin. Pinch to zoom.\").waitFor({ timeout: 7000 }); })"
+UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"library-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\", \"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByRole(\"button\", { name: \"See 3D build\" }).waitFor({ timeout: 7000 }); await page.getByRole(\"button\", { name: \"See 3D build\" }).click(); await page.getByText(\"Drag to spin. Pinch to zoom.\").waitFor({ timeout: 7000 }); })"
 "${PWCLI}" run-code "${UPLOAD_CODE}" >/dev/null
 SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
 SNAPSHOT_PATH="$(printf '%s\n' "${SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"

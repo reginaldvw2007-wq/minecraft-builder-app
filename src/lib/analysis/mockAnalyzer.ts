@@ -7,8 +7,11 @@ import { MIN_RECOMMENDED_REFERENCE_COUNT } from '../validateSources'
 import type { AnalysisRequest, AnalysisResult, StructureAnalyzer } from './types'
 
 function collectWarnings(sources: SourceImage[]) {
+  const hasCaptureProfiles = sources.some((source) => source.captureProfile)
   const warnings = [
-    'Prototype output is mock-generated from file names and sizes, not real image understanding.',
+    hasCaptureProfiles
+      ? 'Prototype output uses local photo color and silhouette heuristics, not full 3D image understanding.'
+      : 'Prototype output is mock-generated from file names and sizes, not real image understanding.',
   ]
 
   if (sources.length < MIN_RECOMMENDED_REFERENCE_COUNT) {

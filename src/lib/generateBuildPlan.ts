@@ -1,3 +1,5 @@
+import type { CaptureProfile } from './extractImageProfile'
+
 export const SHOT_ROLE_CYCLE = ['Front', 'Corner', 'Side', 'Roof'] as const
 
 export type ShotRole = (typeof SHOT_ROLE_CYCLE)[number]
@@ -12,6 +14,7 @@ export type SourceImage = {
   previewUrl?: string
   objectUrl?: boolean
   isDemo?: boolean
+  captureProfile?: CaptureProfile
 }
 
 export type MaterialEstimate = {
@@ -277,9 +280,120 @@ function createSeed(sources: SourceImage[]) {
         characterSum + character.charCodeAt(0) * (characterIndex + 1),
       0,
     )
+    const profileScore = source.captureProfile
+      ? Math.round(
+          source.captureProfile.width * 13 +
+            source.captureProfile.height * 7 +
+            source.captureProfile.brightness * 1000 +
+            source.captureProfile.contrast * 1600 +
+            source.captureProfile.saturation * 1200 +
+            source.captureProfile.warmth * 900 +
+            source.captureProfile.edgeDensity * 2200 +
+            source.captureProfile.topBrightness * 600 +
+            source.captureProfile.bottomBrightness * 400,
+        )
+      : 0
 
-    return sum + nameScore + source.sizeBytes * (index + 1)
+    return sum + nameScore + profileScore + source.sizeBytes * (index + 1)
   }, 7919)
+}
+
+function summarizeCaptureProfiles(sources: SourceImage[]) {
+  const profiles = sources
+    .map((source) => source.captureProfile)
+    .filter((profile): profile is CaptureProfile => Boolean(profile))
+
+  if (profiles.length === 0) {
+    return null
+  }
+
+  const average = <T extends number>(values: T[]) =>
+    values.reduce((sum, value) => sum + value, 0) / values.length
+  const byRoles = (roles: ShotRole[]) =>
+    sources
+      .filter((source) => roles.includes(source.role) && source.captureProfile)
+      .map((source) => source.captureProfile as CaptureProfile)
+
+  const frontProfiles = byRoles(['Front', 'Corner'])
+  const sideProfiles = byRoles(['Side', 'Corner'])
+
+  return {
+    averageAspectRatio: average(profiles.map((profile) => profile.aspectRatio)),
+    averageBrightness: average(profiles.map((profile) => profile.brightness)),
+    averageContrast: average(profiles.map((profile) => profile.contrast)),
+    averageSaturation: average(profiles.map((profile) => profile.saturation)),
+    averageWarmth: average(profiles.map((profile) => profile.warmth)),
+    averageEdgeDensity: average(profiles.map((profile) => profile.edgeDensity)),
+    skyBias: average(profiles.map((profile) => profile.topBrightness - profile.bottomBrightness)),
+    frontAspectRatio:
+      frontProfiles.length > 0
+        ? average(frontProfiles.map((profile) => profile.aspectRatio))
+        : average(profiles.map((profile) => profile.aspectRatio)),
+    sideAspectRatio:
+      sideProfiles.length > 0
+        ? average(sideProfiles.map((profile) => profile.aspectRatio))
+        : average(profiles.map((profile) => profile.aspectRatio)),
+  }
+}
+
+function hasGenericCaptureNames(sources: SourceImage[]) {
+  if (sources.length === 0 || sources.every((source) => source.isDemo)) {
+    return false
+  }
+
+  return sources.every((source) =>
+    /^(img|image|photo|pxl|dsc)[\s_-]?\d+$/i.test(stripExtension(source.name)),
+  )
+}
+
+function pickThemeIndexFromCaptureMetrics(
+  captureMetrics: NonNullable<ReturnType<typeof summarizeCaptureProfiles>>,
+  seed: number,
+) {
+  if (captureMetrics.averageSaturation > 0.4 && captureMetrics.averageWarmth > 0.08) {
+    return 0
+  }
+
+  if (captureMetrics.averageWarmth > 0.12 && captureMetrics.averageBrightness < 0.48) {
+    return 3
+  }
+
+  if (captureMetrics.averageSaturation > 0.34 && captureMetrics.averageBrightness > 0.52) {
+    return 2
+  }
+
+  if (captureMetrics.averageContrast < 0.14 && captureMetrics.averageBrightness > 0.62) {
+    return 4
+  }
+
+  if (captureMetrics.averageContrast > 0.18 || captureMetrics.averageEdgeDensity > 0.22) {
+    return 5
+  }
+
+  return seed % THEMES.length
+}
+
+function pickRoofline(
+  captureMetrics: NonNullable<ReturnType<typeof summarizeCaptureProfiles>> | null,
+  seed: number,
+) {
+  if (!captureMetrics) {
+    return (['Gabled', 'Stepped', 'Parapet'] as const)[seed % 3]
+  }
+
+  if (captureMetrics.skyBias > 0.08) {
+    return 'Gabled' as const
+  }
+
+  if (captureMetrics.averageContrast < 0.12) {
+    return 'Parapet' as const
+  }
+
+  if (captureMetrics.averageEdgeDensity > 0.18) {
+    return 'Stepped' as const
+  }
+
+  return (['Gabled', 'Stepped', 'Parapet'] as const)[seed % 3]
 }
 
 function buildSkyline(
@@ -529,15 +643,46 @@ export function createDemoSources() {
 export function buildPlanFromSources(inputSources: SourceImage[]): BuildPlan {
   const sources = inputSources.length > 0 ? inputSources : createDemoSources()
   const seed = createSeed(sources)
+  const captureMetrics = summarizeCaptureProfiles(sources)
   const averageKb =
     sources.reduce((sum, source) => sum + source.sizeBytes / 1024, 0) / sources.length
-  const width = clamp(12 + sources.length * 2 + Math.round(averageKb % 5), 12, 24)
-  const depth = clamp(10 + sources.length * 2 + Math.round((averageKb / 2) % 4), 10, 22)
-  const height = clamp(8 + sources.length * 2 + Math.round((averageKb / 3) % 5), 8, 18)
+  const width = captureMetrics
+    ? clamp(
+        11 +
+          sources.length * 2 +
+          Math.round(captureMetrics.frontAspectRatio * 5) +
+          Math.round(captureMetrics.averageEdgeDensity * 10),
+        12,
+        24,
+      )
+    : clamp(12 + sources.length * 2 + Math.round(averageKb % 5), 12, 24)
+  const depth = captureMetrics
+    ? clamp(
+        9 +
+          sources.length * 2 +
+          Math.round(captureMetrics.sideAspectRatio * 4) +
+          Math.round(captureMetrics.averageContrast * 12),
+        10,
+        22,
+      )
+    : clamp(10 + sources.length * 2 + Math.round((averageKb / 2) % 4), 10, 22)
+  const height = captureMetrics
+    ? clamp(
+        7 +
+          sources.length * 2 +
+          Math.round((1 / Math.max(captureMetrics.averageAspectRatio, 0.45)) * 3) +
+          Math.round(Math.max(captureMetrics.skyBias, 0) * 12),
+        8,
+        18,
+      )
+    : clamp(8 + sources.length * 2 + Math.round((averageKb / 3) % 5), 8, 18)
   const floors = height >= 15 ? 3 : height >= 10 ? 2 : 1
-  const theme = THEMES[seed % THEMES.length]
-  const roofline = (['Gabled', 'Stepped', 'Parapet'] as const)[seed % 3]
-  const structureName = `${summarizeName(sources)} Concept`
+  const theme = THEMES[
+    captureMetrics ? pickThemeIndexFromCaptureMetrics(captureMetrics, seed) : seed % THEMES.length
+  ]
+  const roofline = pickRoofline(captureMetrics, seed)
+  const summarizedName = hasGenericCaptureNames(sources) ? 'Captured House' : summarizeName(sources)
+  const structureName = `${summarizedName} Concept`
   const footprint = width * depth
   const perimeter = width * 2 + depth * 2
   const shellBlocks = Math.round(perimeter * height * 0.72)
@@ -679,7 +824,9 @@ export function buildPlanFromSources(inputSources: SourceImage[]): BuildPlan {
 
   const summary = `Pocket build pass from ${sources.length} reference photo${
     sources.length === 1 ? '' : 's'
-  } suggests a ${theme.theme.toLowerCase()} rooted in ${theme.biome.toLowerCase()} cues, with a ${roofline.toLowerCase()} profile and a ${width} x ${depth} footprint for a fast Minecraft shell.`
+  } suggests a ${theme.theme.toLowerCase()} rooted in ${theme.biome.toLowerCase()} cues, with a ${roofline.toLowerCase()} profile and a ${width} x ${depth} footprint for a fast Minecraft shell${
+    captureMetrics ? ' shaped by local photo color and silhouette cues.' : '.'
+  }`
 
   return {
     structureName,
