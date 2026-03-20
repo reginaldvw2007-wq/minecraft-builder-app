@@ -739,7 +739,7 @@
     translateZ(28px)
     translateY(calc(var(--viewer-lift) + 10px))
     scale(var(--viewer-scale))
-    rotateX(var(--viewer-pitch))
+    rotateX(var(--viewer-pitch-negative))
     rotateY(var(--viewer-yaw));
   transition: transform 160ms ease;
 }
