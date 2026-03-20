@@ -53,7 +53,7 @@ fi
 
 "${PWCLI}" close-all >/dev/null 2>&1 || true
 "${PWCLI}" open "${BASE_URL}" >/dev/null
-UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"library-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\", \"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByText(\"Render ready\").waitFor({ timeout: 5000 }); })"
+UPLOAD_CODE="(async (page) => { await page.setViewportSize({ width: 390, height: 844 }); const input = page.locator(\"[data-testid=\\\"library-upload-input\\\"]\"); await input.setInputFiles([\"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\", \"${UPLOAD_ONE}\", \"${UPLOAD_TWO}\"]); await page.getByText(\"Drag to spin 360\").waitFor({ timeout: 7000 }); })"
 "${PWCLI}" run-code "${UPLOAD_CODE}" >/dev/null
 SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
 SNAPSHOT_PATH="$(printf '%s\n' "${SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"
@@ -63,33 +63,8 @@ if [[ -z "${SNAPSHOT_PATH}" || ! -f "${ROOT_DIR}/${SNAPSHOT_PATH}" ]]; then
   exit 1
 fi
 
-if ! rg 'Build It Now|Render ready' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
-  echo "Upload smoke check did not find the render-ready state."
-  exit 1
-fi
-
-GUIDE_REF="$(
-  rg 'button "Build It Now".*\[ref=' "${ROOT_DIR}/${SNAPSHOT_PATH}" \
-    | sed -E 's/.*\[ref=([^]]+)\].*/\1/' \
-    | head -n 1
-)"
-
-if [[ -z "${GUIDE_REF}" ]]; then
-  echo "Could not find the Build It Now button ref in the snapshot."
-  exit 1
-fi
-
-"${PWCLI}" click "${GUIDE_REF}" >/dev/null
-GUIDE_SNAPSHOT_OUTPUT="$("${PWCLI}" snapshot)"
-GUIDE_SNAPSHOT_PATH="$(printf '%s\n' "${GUIDE_SNAPSHOT_OUTPUT}" | sed -n 's/.*\[Snapshot](\(.*\)).*/\1/p' | tail -n 1)"
-
-if [[ -z "${GUIDE_SNAPSHOT_PATH}" || ! -f "${ROOT_DIR}/${GUIDE_SNAPSHOT_PATH}" ]]; then
-  echo "Could not locate the guide snapshot output."
-  exit 1
-fi
-
-if ! rg 'Back a level|Next level|Drag to spin 360' "${ROOT_DIR}/${GUIDE_SNAPSHOT_PATH}" >/dev/null 2>&1; then
-  echo "Guide smoke check did not find the 3D viewer controls."
+if ! rg 'Build guide|Drag to spin 360|Back a level|Next level' "${ROOT_DIR}/${SNAPSHOT_PATH}" >/dev/null 2>&1; then
+  echo "Upload smoke check did not reach the guide state."
   exit 1
 fi
 
