@@ -1138,9 +1138,9 @@ function clampAngle(value: number, min: number, max: number) {
 }
 
 const VIEW_HOME_YAW = -28
-const VIEW_HOME_PITCH = 26
-const VIEW_MIN_PITCH = 18
-const VIEW_MAX_PITCH = 56
+const VIEW_HOME_PITCH = 34
+const VIEW_MIN_PITCH = 16
+const VIEW_MAX_PITCH = 58
 
 function HouseBuildViewer({
   layers,
@@ -1296,6 +1296,7 @@ function HouseBuildViewer({
               '--viewer-scale': viewerScale,
               '--viewer-yaw': `${yaw}deg`,
               '--viewer-pitch': `${pitch}deg`,
+              '--viewer-pitch-negative': `${-pitch}deg`,
               '--viewer-lift': `${visibleLayerCount * cubeStep * 0.22}px`,
             } as CSSProperties
           }
