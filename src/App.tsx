@@ -25,6 +25,7 @@ import {
   buildPlanToMarkdown,
   createExportBaseName,
 } from './lib/exportBuildPlan'
+import { extractImageProfile } from './lib/extractImageProfile'
 import {
   MAX_REFERENCE_FILES,
   summarizeReferenceValidation,
@@ -118,6 +119,7 @@ const FILE_PREVIEW_TONES = [
 type SlotSource = SourceImage | null
 type AppView = 'capture' | 'render' | 'guide'
 type RenderState = 'idle' | 'rendering' | 'ready'
+type RenderLaunchMode = 'keep-capture' | 'open-guide'
 
 function createEmptySlotSources(): SlotSource[] {
   return PHOTO_MISSIONS.map(() => null)
@@ -193,9 +195,10 @@ function formatBytes(sizeBytes: number) {
   return `${Math.round(sizeBytes / 1_000)} KB`
 }
 
-function createSourceFromFile(file: File, slotIndex: number): SourceImage {
+async function createSourceFromFile(file: File, slotIndex: number): Promise<SourceImage> {
   const mission = PHOTO_MISSIONS[slotIndex]
   const role = mission?.role ?? 'Corner'
+  const captureProfile = await extractImageProfile(file)
 
   return {
     id: `${mission?.id ?? 'slot'}-${file.name}-${file.lastModified}-${slotIndex}`,
@@ -206,6 +209,7 @@ function createSourceFromFile(file: File, slotIndex: number): SourceImage {
     previewTone: FILE_PREVIEW_TONES[slotIndex % FILE_PREVIEW_TONES.length],
     previewUrl: URL.createObjectURL(file),
     objectUrl: true,
+    captureProfile,
   }
 }
 
@@ -325,6 +329,7 @@ function App() {
   const [renderState, setRenderState] = useState<RenderState>('idle')
   const [renderStepIndex, setRenderStepIndex] = useState(0)
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
+  const [lastCapturedSlotIndex, setLastCapturedSlotIndex] = useState<number | null>(null)
   const [intakeNotice, setIntakeNotice] = useState('')
   const [exportNotice, setExportNotice] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -346,6 +351,10 @@ function App() {
   const canRender = sources.length >= MIN_RENDER_PHOTO_COUNT
   const builderReward = getBuilderReward(sources.length)
   const activeLayerSummary = summarizeLayer(activeLayer)
+  const lastCapturedSource =
+    lastCapturedSlotIndex !== null ? slotSources[lastCapturedSlotIndex] : null
+  const lastCapturedMission =
+    lastCapturedSlotIndex !== null ? PHOTO_MISSIONS[lastCapturedSlotIndex] : null
   const revealBadges = [
     builderReward.title,
     plan.themeProfile.tags[0] ?? plan.theme,
@@ -405,7 +414,7 @@ function App() {
     }
   }, [renderState, view])
 
-  function runRender(nextSources: SourceImage[]) {
+  function runRender(nextSources: SourceImage[], launchMode: RenderLaunchMode) {
     for (const timer of renderTimersRef.current) {
       window.clearTimeout(timer)
     }
@@ -418,7 +427,7 @@ function App() {
       return
     }
 
-    setView('render')
+    setView(launchMode === 'open-guide' ? 'render' : 'capture')
     setRenderState('rendering')
     setRenderStepIndex(0)
 
@@ -440,7 +449,7 @@ function App() {
             '',
         )
         setRenderState('ready')
-        setView('guide')
+        setView(launchMode === 'open-guide' ? 'guide' : 'capture')
       })
     }, 1280)
 
@@ -461,11 +470,12 @@ function App() {
     setView('capture')
     setRenderState('idle')
     setRenderStepIndex(0)
+    setLastCapturedSlotIndex(null)
     setIntakeNotice('')
     setExportNotice('')
   }
 
-  function handleCameraCapture(event: ChangeEvent<HTMLInputElement>) {
+  async function handleCameraCapture(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0]
 
     if (!selectedFile) {
@@ -489,21 +499,25 @@ function App() {
       URL.revokeObjectURL(existingSource.previewUrl)
     }
 
-    nextSlots[activeSlotIndex] = createSourceFromFile(validation.acceptedFiles[0], activeSlotIndex)
+    nextSlots[activeSlotIndex] = await createSourceFromFile(
+      validation.acceptedFiles[0],
+      activeSlotIndex,
+    )
 
     const nextSources = getOrderedSources(nextSlots)
 
     setSlotSources(nextSlots)
+    setLastCapturedSlotIndex(activeSlotIndex)
     setSelectedSlotIndex(
       getNextOpenSlotIndex(nextSlots) === -1 ? null : getNextOpenSlotIndex(nextSlots),
     )
-    runRender(nextSources)
+    runRender(nextSources, 'keep-capture')
     setIntakeNotice(validationSummary || `${activeMission.title} captured.`)
     setExportNotice('')
     event.target.value = ''
   }
 
-  function handleLibrarySelection(event: ChangeEvent<HTMLInputElement>) {
+  async function handleLibrarySelection(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files ?? [])
 
     if (selectedFiles.length === 0) {
@@ -532,18 +546,23 @@ function App() {
 
     const nextSlots = [...baseSlots]
 
-    acceptedFiles.forEach((file, index) => {
+    const createdSources = await Promise.all(
+      acceptedFiles.map((file, index) => createSourceFromFile(file, openSlotIndexes[index])),
+    )
+
+    createdSources.forEach((source, index) => {
       const slotIndex = openSlotIndexes[index]
-      nextSlots[slotIndex] = createSourceFromFile(file, slotIndex)
+      nextSlots[slotIndex] = source
     })
 
     const nextSources = getOrderedSources(nextSlots)
 
     setSlotSources(nextSlots)
+    setLastCapturedSlotIndex(openSlotIndexes[createdSources.length - 1] ?? null)
     setSelectedSlotIndex(
       getNextOpenSlotIndex(nextSlots) === -1 ? null : getNextOpenSlotIndex(nextSlots),
     )
-    runRender(nextSources)
+    runRender(nextSources, 'keep-capture')
     setIntakeNotice(
       noticeParts.join(' ') || `Added ${acceptedFiles.length} house photo${acceptedFiles.length === 1 ? '' : 's'}.`,
     )
@@ -557,9 +576,10 @@ function App() {
 
     setSlotSources(nextSlots)
     setSelectedSlotIndex(null)
+    setLastCapturedSlotIndex(0)
     setIntakeNotice('Demo house loaded.')
     setExportNotice('')
-    runRender(nextSources)
+    runRender(nextSources, 'open-guide')
   }
 
   function stepActiveLayer(direction: -1 | 1) {
@@ -688,6 +708,11 @@ function App() {
               <button type="button" className="upload-button upload-button--xl" onClick={openCamera}>
                 {slotSources[activeSlotIndex] ? `Retake ${activeMission.title}` : `Take ${activeMission.title}`}
               </button>
+              {renderState === 'ready' ? (
+                <button type="button" className="upload-button" onClick={() => setView('guide')}>
+                  See 3D build
+                </button>
+              ) : null}
               <button type="button" className="ghost-button" onClick={openLibrary}>
                 Upload from library
               </button>
@@ -701,6 +726,27 @@ function App() {
               ) : null}
             </div>
           </div>
+
+          {lastCapturedSource ? (
+            <div className="latest-shot-card">
+              <div className="latest-shot-card__copy">
+                <p className="section-kicker">Last photo saved</p>
+                <h3>{lastCapturedMission?.title ?? 'Latest angle'}</h3>
+                <p>Make sure this looks right. Tap the same angle card to retake it.</p>
+              </div>
+              {lastCapturedSource.previewUrl ? (
+                <img
+                  src={lastCapturedSource.previewUrl}
+                  alt={`${lastCapturedMission?.title ?? 'Latest'} capture preview`}
+                />
+              ) : (
+                <div
+                  className="latest-shot-card__swatch"
+                  style={{ backgroundImage: lastCapturedSource.previewTone }}
+                />
+              )}
+            </div>
+          ) : null}
 
           <div className="reward-strip-card">
             <img
@@ -759,7 +805,11 @@ function App() {
               {intakeNotice ||
                 (sources.length === 0
                   ? 'Tap the green button and keep walking around the house.'
-                  : `${sources.length} photo${sources.length === 1 ? '' : 's'} ready.`)}
+                  : renderState === 'rendering'
+                    ? 'Rendering your block guide in the background.'
+                    : renderState === 'ready'
+                      ? 'Your build is ready. Open the 3D guide any time.'
+                      : `${sources.length} photo${sources.length === 1 ? '' : 's'} ready.`)}
             </p>
             {sources.length > 0 ? (
               <p className="status-note status-note--muted">

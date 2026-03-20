@@ -278,6 +278,7 @@
 }
 
 .capture-hero-card,
+.latest-shot-card,
 .reward-strip-card,
 .reveal-banner,
 .render-ready-card,
@@ -302,6 +303,7 @@
 }
 
 .capture-hero-card,
+.latest-shot-card,
 .reward-strip-card,
 .reveal-banner,
 .render-ready-card,
@@ -320,12 +322,18 @@
   gap: 16px;
 }
 
+.latest-shot-card {
+  display: grid;
+  gap: 14px;
+}
+
 .capture-hero-card__copy {
   display: grid;
   gap: 10px;
 }
 
 .capture-hero-card__copy h3,
+.latest-shot-card__copy h3,
 .rendering-card h3,
 .empty-state-card h3,
 .render-ready-card h3,
@@ -339,6 +347,7 @@
 }
 
 .capture-hero-card__copy p,
+.latest-shot-card__copy p,
 .render-ready-card__summary,
 .empty-state-card p,
 .guide-header-card p,
@@ -371,6 +380,25 @@
 .secondary-actions {
   display: grid;
   gap: 10px;
+}
+
+.latest-shot-card__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.latest-shot-card img,
+.latest-shot-card__swatch {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.latest-shot-card__swatch {
+  background-size: cover;
+  background-position: center;
 }
 
 .reward-strip-card,
