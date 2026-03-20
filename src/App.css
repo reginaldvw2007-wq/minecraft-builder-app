@@ -685,24 +685,14 @@
   text-transform: uppercase;
 }
 
-.slice-orbit__viewport {
+.slice-orbit__canvas {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 104px 14px 92px;
-  perspective: 1180px;
-  perspective-origin: 50% 38%;
+  padding: 102px 12px 90px;
   touch-action: none;
-  user-select: none;
-  cursor: grab;
 }
 
-.slice-orbit__viewport--dragging {
-  cursor: grabbing;
-}
-
-.slice-orbit__viewport::before {
+.slice-orbit__canvas::before {
   content: '';
   position: absolute;
   inset: 18% 10% 18% 10%;
@@ -714,6 +704,13 @@
   pointer-events: none;
 }
 
+.slice-orbit__canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 22px;
+}
+
 .slice-orbit::after {
   content: '';
   position: absolute;
@@ -722,60 +719,6 @@
   border-radius: 999px;
   background: radial-gradient(circle, rgba(0, 0, 0, 0.45), transparent 70%);
   filter: blur(26px);
-}
-
-.slice-orbit__camera,
-.slice-orbit__model,
-.voxel-cube {
-  transform-style: preserve-3d;
-}
-
-.slice-orbit__camera {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  transform:
-    translateZ(28px)
-    translateY(calc(var(--viewer-lift) + 10px))
-    scale(var(--viewer-scale))
-    rotateX(var(--viewer-pitch-negative))
-    rotateY(var(--viewer-yaw));
-  transition: transform 160ms ease;
-}
-
-.slice-orbit__model {
-  position: absolute;
-  left: 50%;
-  top: 61%;
-}
-
-.slice-orbit__ground {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(118, 149, 104, 0.16), rgba(48, 66, 53, 0.38)),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.03) 0,
-      rgba(255, 255, 255, 0.03) 8px,
-      transparent 8px,
-      transparent 16px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.03) 0,
-      rgba(255, 255, 255, 0.03) 8px,
-      transparent 8px,
-      transparent 16px
-    );
-  border: 1px solid rgba(171, 213, 101, 0.12);
-  transform: translate3d(-50%, 16px, 0) rotateX(90deg);
-  box-shadow:
-    0 0 0 2px rgba(8, 20, 24, 0.16),
-    0 28px 46px rgba(0, 0, 0, 0.34);
 }
 
 .slice-orbit__controls {
@@ -793,158 +736,6 @@
 .slice-orbit__controls .progress-chip {
   justify-self: center;
   max-width: 100%;
-}
-
-.voxel-cube {
-  position: absolute;
-  filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.25));
-  transition:
-    transform 180ms ease,
-    filter 180ms ease;
-  transform-style: preserve-3d;
-}
-
-.voxel-cube__face {
-  position: absolute;
-  display: block;
-  inset: 0;
-  backface-visibility: hidden;
-  background-size: 100% 100%, 8px 8px, 8px 8px, 100% 100%;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.14);
-}
-
-.voxel-cube__face--front {
-  transform: rotateY(0deg) translateZ(var(--cube-half));
-}
-
-.voxel-cube__face--back {
-  transform: rotateY(180deg) translateZ(var(--cube-half));
-}
-
-.voxel-cube__face--right {
-  transform: rotateY(90deg) translateZ(var(--cube-half));
-}
-
-.voxel-cube__face--left {
-  transform: rotateY(-90deg) translateZ(var(--cube-half));
-}
-
-.voxel-cube__face--top {
-  transform: rotateX(90deg) translateZ(var(--cube-half));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 -4px 0 rgba(0, 0, 0, 0.12);
-}
-
-.voxel-cube__face--bottom {
-  transform: rotateX(-90deg) translateZ(var(--cube-half));
-}
-
-.voxel-cube--wall {
-  --voxel-top:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.08)),
-    repeating-linear-gradient(0deg, rgba(120, 78, 41, 0.15) 0, rgba(120, 78, 41, 0.15) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(89, 55, 27, 0.16) 0, rgba(89, 55, 27, 0.16) 4px, transparent 4px, transparent 8px),
-    linear-gradient(135deg, #c98d51 0%, #9b642e 100%);
-  --voxel-front:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.22)),
-    repeating-linear-gradient(0deg, rgba(79, 49, 22, 0.24) 0, rgba(79, 49, 22, 0.24) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(61, 36, 15, 0.18) 0, rgba(61, 36, 15, 0.18) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #9c6b38 0%, #71471f 100%);
-  --voxel-side:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.28)),
-    repeating-linear-gradient(0deg, rgba(61, 36, 15, 0.22) 0, rgba(61, 36, 15, 0.22) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(44, 24, 8, 0.18) 0, rgba(44, 24, 8, 0.18) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #7f5326 0%, #563613 100%);
-}
-
-.voxel-cube--fill {
-  --voxel-top:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.1)),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.06) 0, rgba(255, 255, 255, 0.06) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0, rgba(0, 0, 0, 0.12) 4px, transparent 4px, transparent 8px),
-    linear-gradient(135deg, #8ea58a 0%, #66785e 100%);
-  --voxel-front:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.24)),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0, rgba(0, 0, 0, 0.16) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.04) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #697d63 0%, #4d5d46 100%);
-  --voxel-side:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0, rgba(0, 0, 0, 0.18) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0, rgba(255, 255, 255, 0.03) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #5a6b54 0%, #42503d 100%);
-}
-
-.voxel-cube--highlight {
-  --voxel-top:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(0, 0, 0, 0.04)),
-    repeating-linear-gradient(0deg, rgba(190, 141, 41, 0.12) 0, rgba(190, 141, 41, 0.12) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(255, 231, 138, 0.16) 0, rgba(255, 231, 138, 0.16) 4px, transparent 4px, transparent 8px),
-    linear-gradient(135deg, #ffd764 0%, #daa334 100%);
-  --voxel-front:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.18)),
-    repeating-linear-gradient(0deg, rgba(170, 115, 31, 0.18) 0, rgba(170, 115, 31, 0.18) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(255, 221, 112, 0.14) 0, rgba(255, 221, 112, 0.14) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #efbc4c 0%, #bd8223 100%);
-  --voxel-side:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.24)),
-    repeating-linear-gradient(0deg, rgba(150, 100, 25, 0.18) 0, rgba(150, 100, 25, 0.18) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(240, 196, 84, 0.1) 0, rgba(240, 196, 84, 0.1) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #d19a37 0%, #93641a 100%);
-}
-
-.voxel-cube--roof {
-  --voxel-top:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.08)),
-    repeating-linear-gradient(0deg, rgba(73, 85, 104, 0.2) 0, rgba(73, 85, 104, 0.2) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(34, 41, 54, 0.2) 0, rgba(34, 41, 54, 0.2) 4px, transparent 4px, transparent 8px),
-    linear-gradient(135deg, #6f7b92 0%, #495367 100%);
-  --voxel-front:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.26)),
-    repeating-linear-gradient(0deg, rgba(34, 41, 54, 0.22) 0, rgba(34, 41, 54, 0.22) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(64, 74, 90, 0.16) 0, rgba(64, 74, 90, 0.16) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #4d596e 0%, #323a4a 100%);
-  --voxel-side:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.3)),
-    repeating-linear-gradient(0deg, rgba(26, 31, 41, 0.24) 0, rgba(26, 31, 41, 0.24) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(90deg, rgba(54, 62, 75, 0.14) 0, rgba(54, 62, 75, 0.14) 4px, transparent 4px, transparent 8px),
-    linear-gradient(180deg, #3d4759 0%, #272e3b 100%);
-}
-
-.voxel-cube__face--front,
-.voxel-cube__face--back {
-  background-image: var(--voxel-front);
-}
-
-.voxel-cube__face--left,
-.voxel-cube__face--right {
-  background-image: var(--voxel-side);
-}
-
-.voxel-cube__face--top {
-  background-image: var(--voxel-top);
-}
-
-.voxel-cube__face--bottom {
-  background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.42)),
-    linear-gradient(180deg, #303841 0%, #1c2128 100%);
-}
-
-.voxel-cube--current {
-  filter:
-    drop-shadow(0 20px 22px rgba(0, 0, 0, 0.28))
-    drop-shadow(0 0 18px rgba(255, 214, 96, 0.18));
-}
-
-.voxel-cube--current .voxel-cube__face--top {
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 244, 200, 0.28),
-    inset 0 -4px 0 rgba(0, 0, 0, 0.12);
 }
 
 .slice-guide-notes__chips {

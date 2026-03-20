@@ -1,22 +1,19 @@
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   useTransition,
-  type CSSProperties,
   type ChangeEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import './App.css'
 import builderBadgeStrip from './assets/builder-badge-strip.svg'
 import captureQuestMap from './assets/capture-quest-map.svg'
 import revealCelebrationCard from './assets/reveal-celebration-card.svg'
 import voxelPocketScene from './assets/voxel-pocket-scene.svg'
+import { HouseBuildViewer } from './components/HouseBuildViewer'
 import {
   createDemoSources,
   type BuildPlan,
-  type LayerCell,
   type LayerSlice,
   type ShotRole,
   type SourceImage,
@@ -126,12 +123,61 @@ function createEmptySlotSources(): SlotSource[] {
   return PHOTO_MISSIONS.map(() => null)
 }
 
-function getGuideStartingLayerIndex(layerCount: number) {
-  if (layerCount <= 4) {
-    return Math.max(layerCount - 1, 0)
+function summarizeLayerCells(layer: LayerSlice) {
+  let wallCount = 0
+  let fillCount = 0
+  let roofCount = 0
+  let highlightCount = 0
+  let emptyCount = 0
+
+  for (const row of layer.grid) {
+    for (const cell of row) {
+      if (cell === 'wall') {
+        wallCount += 1
+      } else if (cell === 'fill') {
+        fillCount += 1
+      } else if (cell === 'roof') {
+        roofCount += 1
+      } else if (cell === 'highlight') {
+        highlightCount += 1
+      } else {
+        emptyCount += 1
+      }
+    }
   }
 
-  return Math.min(Math.max(Math.round(layerCount * 0.38), 3), layerCount - 2)
+  return {
+    wallCount,
+    fillCount,
+    roofCount,
+    highlightCount,
+    emptyCount,
+  }
+}
+
+function getGuideStartingLayerIndex(layers: LayerSlice[]) {
+  if (layers.length <= 4) {
+    return Math.max(layers.length - 1, 0)
+  }
+
+  const targetIndex = Math.round((layers.length - 1) * 0.58)
+  const bestLayer = layers
+    .map((layer, index) => {
+      const counts = summarizeLayerCells(layer)
+      const interestingMass = counts.wallCount * 2.6 + counts.highlightCount * 2 + counts.roofCount * 1.7
+      const slabPenalty = counts.fillCount * 1.55
+      const flatPenalty = counts.emptyCount < counts.wallCount ? 20 : 0
+      const distancePenalty = Math.abs(index - targetIndex) * 3
+
+      return {
+        index,
+        score: interestingMass - slabPenalty - flatPenalty - distancePenalty,
+      }
+    })
+    .filter(({ index }) => index >= 2 && index <= layers.length - 3)
+    .sort((left, right) => right.score - left.score)[0]
+
+  return bestLayer?.index ?? Math.min(Math.max(targetIndex, 2), layers.length - 2)
 }
 
 function formatBytes(sizeBytes: number) {
@@ -263,7 +309,7 @@ function App() {
   const [slotSources, setSlotSources] = useState<SlotSource[]>(createEmptySlotSources)
   const [plan, setPlan] = useState<BuildPlan>(INITIAL_PLAN)
   const [activeLayerId, setActiveLayerId] = useState(
-    INITIAL_PLAN.layers[getGuideStartingLayerIndex(INITIAL_PLAN.layers.length)]?.id ??
+    INITIAL_PLAN.layers[getGuideStartingLayerIndex(INITIAL_PLAN.layers)]?.id ??
       INITIAL_PLAN.layers[0]?.id ??
       '',
   )
@@ -366,7 +412,7 @@ function App() {
         setAnalysisWarnings(nextAnalysis.warnings)
         setAnalysisMode(nextAnalysis.mode)
         setActiveLayerId(
-          nextAnalysis.plan.layers[getGuideStartingLayerIndex(nextAnalysis.plan.layers.length)]?.id ??
+          nextAnalysis.plan.layers[getGuideStartingLayerIndex(nextAnalysis.plan.layers)]?.id ??
             nextAnalysis.plan.layers[0]?.id ??
             '',
         )
@@ -1103,262 +1149,6 @@ function LayerPreview({ layer, width }: LayerPreviewProps) {
         </span>
       </div>
     </>
-  )
-}
-
-type HouseBuildViewerProps = {
-  layers: LayerSlice[]
-  visibleLayerCount: number
-  activeLayerLabel: string
-  onStepLayer: (direction: -1 | 1) => void
-  canLower: boolean
-  canRaise: boolean
-}
-
-type DragState = {
-  pointerId: number
-  startX: number
-  startY: number
-  startYaw: number
-  startPitch: number
-}
-
-type VisibleVoxelBlock = {
-  id: string
-  cell: Exclude<LayerCell, 'empty'>
-  layerLabel: string
-  isCurrent: boolean
-  x: number
-  y: number
-  z: number
-}
-
-function clampAngle(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
-
-const VIEW_HOME_YAW = -28
-const VIEW_HOME_PITCH = 34
-const VIEW_MIN_PITCH = 16
-const VIEW_MAX_PITCH = 58
-
-function HouseBuildViewer({
-  layers,
-  visibleLayerCount,
-  activeLayerLabel,
-  onStepLayer,
-  canLower,
-  canRaise,
-}: HouseBuildViewerProps) {
-  const cubeSize = 22
-  const cubeStep = 24
-  const dragStateRef = useRef<DragState | null>(null)
-  const [yaw, setYaw] = useState(VIEW_HOME_YAW)
-  const [pitch, setPitch] = useState(VIEW_HOME_PITCH)
-  const [isDragging, setIsDragging] = useState(false)
-  const visibleLayers = layers.slice(0, visibleLayerCount)
-  const activeTopLayer = visibleLayers.at(-1)
-  const width = visibleLayers[0]?.grid[0]?.length ?? 0
-  const depth = visibleLayers[0]?.grid.length ?? 0
-
-  const blocks = useMemo<VisibleVoxelBlock[]>(() => {
-    const occupancy = new Set<string>()
-
-    visibleLayers.forEach((layer, layerIndex) => {
-      layer.grid.forEach((row, rowIndex) => {
-        row.forEach((cell, columnIndex) => {
-          if (cell !== 'empty') {
-            occupancy.add(`${columnIndex}:${layerIndex}:${rowIndex}`)
-          }
-        })
-      })
-    })
-
-    return visibleLayers.flatMap((layer, layerIndex) =>
-      layer.grid.flatMap((row, rowIndex) =>
-        row.flatMap((cell, columnIndex) => {
-          if (cell === 'empty') {
-            return []
-          }
-
-          const neighbors = [
-            [1, 0, 0],
-            [-1, 0, 0],
-            [0, 1, 0],
-            [0, -1, 0],
-            [0, 0, 1],
-            [0, 0, -1],
-          ] as const
-          const isExposed = neighbors.some(
-            ([dx, dy, dz]) => !occupancy.has(`${columnIndex + dx}:${layerIndex + dy}:${rowIndex + dz}`),
-          )
-
-          if (!isExposed) {
-            return []
-          }
-
-          return [
-            {
-              id: `${layer.id}-${rowIndex}-${columnIndex}-${cell}`,
-              cell,
-              layerLabel: layer.label,
-              isCurrent: layerIndex === visibleLayers.length - 1,
-              x: (columnIndex - (width - 1) / 2) * cubeStep,
-              y: -(layerIndex * cubeStep),
-              z: (rowIndex - (depth - 1) / 2) * cubeStep,
-            },
-          ]
-        }),
-      ),
-    )
-  }, [cubeStep, depth, visibleLayers, width])
-
-  if (blocks.length === 0 || width === 0 || depth === 0) {
-    return (
-      <div className="slice-orbit">
-        <p className="status-note">This slice is empty.</p>
-      </div>
-    )
-  }
-
-  const viewerScale = clampAngle(8.8 / Math.max(width, depth, visibleLayerCount * 1.05), 0.38, 0.94)
-  const groundWidth = width * cubeStep * 1.18
-  const groundDepth = depth * cubeStep * 1.18
-
-  function resetView() {
-    setYaw(VIEW_HOME_YAW)
-    setPitch(VIEW_HOME_PITCH)
-  }
-
-  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId)
-    dragStateRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      startYaw: yaw,
-      startPitch: pitch,
-    }
-    setIsDragging(true)
-  }
-
-  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    const dragState = dragStateRef.current
-
-    if (!dragState || dragState.pointerId !== event.pointerId) {
-      return
-    }
-
-    const yawDelta = (event.clientX - dragState.startX) * 0.34
-    const pitchDelta = (event.clientY - dragState.startY) * 0.18
-
-    setYaw(dragState.startYaw + yawDelta)
-    setPitch(clampAngle(dragState.startPitch - pitchDelta, VIEW_MIN_PITCH, VIEW_MAX_PITCH))
-  }
-
-  function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (dragStateRef.current?.pointerId === event.pointerId) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-      dragStateRef.current = null
-      setIsDragging(false)
-    }
-  }
-
-  return (
-    <div className="slice-orbit" aria-label={`3D house preview through layer ${visibleLayerCount}`}>
-      <div className="slice-orbit__hud">
-        <span className="progress-chip">
-          Layer {visibleLayerCount} / {layers.length}
-        </span>
-        {activeTopLayer ? (
-          <span className="confidence-chip confidence-chip--muted">{activeTopLayer.label}</span>
-        ) : null}
-        <button type="button" className="slice-orbit__reset" onClick={resetView}>
-          Front view
-        </button>
-      </div>
-
-      <div className="slice-orbit__prompt">
-        <span>{isDragging ? 'Looking around...' : 'Drag to look all around'}</span>
-      </div>
-
-      <div
-        className={`slice-orbit__viewport ${isDragging ? 'slice-orbit__viewport--dragging' : ''}`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-      >
-        <div
-          className="slice-orbit__camera"
-          style={
-            {
-              '--viewer-scale': viewerScale,
-              '--viewer-yaw': `${yaw}deg`,
-              '--viewer-pitch': `${pitch}deg`,
-              '--viewer-pitch-negative': `${-pitch}deg`,
-              '--viewer-lift': `${visibleLayerCount * cubeStep * 0.22}px`,
-            } as CSSProperties
-          }
-        >
-          <div className="slice-orbit__model">
-            <div
-              className="slice-orbit__ground"
-              style={
-                {
-                  width: `${groundWidth}px`,
-                  height: `${groundDepth}px`,
-                } as CSSProperties
-              }
-            />
-            {blocks.map((block) => (
-              <div
-                key={block.id}
-                className={`voxel-cube voxel-cube--${block.cell} ${block.isCurrent ? 'voxel-cube--current' : ''}`}
-                style={
-                  {
-                    transform: `translate3d(${block.x}px, ${block.y}px, ${block.z}px)${
-                      block.isCurrent ? ' translateY(-4px)' : ''
-                    }`,
-                    width: `${cubeSize}px`,
-                    height: `${cubeSize}px`,
-                    '--cube-half': `${cubeSize / 2}px`,
-                  } as CSSProperties
-                }
-                title={`${block.layerLabel}: ${block.cell}`}
-              >
-                <span className="voxel-cube__face voxel-cube__face--front" />
-                <span className="voxel-cube__face voxel-cube__face--back" />
-                <span className="voxel-cube__face voxel-cube__face--right" />
-                <span className="voxel-cube__face voxel-cube__face--left" />
-                <span className="voxel-cube__face voxel-cube__face--top" />
-                <span className="voxel-cube__face voxel-cube__face--bottom" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="slice-orbit__controls">
-        <button
-          type="button"
-          className="slice-orbit__step"
-          onClick={() => onStepLayer(-1)}
-          disabled={!canLower}
-        >
-          ← Back a level
-        </button>
-        <span className="progress-chip">{activeLayerLabel}</span>
-        <button
-          type="button"
-          className="slice-orbit__step"
-          onClick={() => onStepLayer(1)}
-          disabled={!canRaise}
-        >
-          Next level →
-        </button>
-      </div>
-    </div>
   )
 }
 
