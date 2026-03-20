@@ -357,7 +357,18 @@ function buildLayerGrid(
         x < width - 3 &&
         y > 2 &&
         y < depth - 3 &&
-        ((x + y) % 5 === 0 || hash3(seed, x, y) > 0.92)
+        (((x + y + (seed % 5)) % 7 === 0 && x % 3 !== 0 && y % 2 === 0) ||
+          hash3(seed, x, y, 9) > 0.985)
+      const supportBand =
+        levelIndex === 1 || levelIndex === loftBand || levelIndex === roofStart - 2
+      const mezzanineFill =
+        levelIndex === loftBand &&
+        x > 1 &&
+        x < width - 2 &&
+        y >= Math.floor(depth * 0.52) &&
+        y < depth - 2 &&
+        Math.abs(x - center) > 1 &&
+        hash3(seed, x, y, 21) > 0.16
 
       if (levelIndex === 0) {
         if (frontEntry) {
@@ -395,10 +406,10 @@ function buildLayerGrid(
 
           return shouldOpenWindow && hash3(seed, x, y, levelIndex) > 0.2 ? 'empty' : 'wall'
         }
-        if (levelIndex === loftBand && x > 1 && x < width - 2 && y > 1 && y < depth - 2) {
+        if (mezzanineFill) {
           return 'fill'
         }
-        if (supportPost) {
+        if (supportBand && supportPost) {
           return 'fill'
         }
         return 'empty'
