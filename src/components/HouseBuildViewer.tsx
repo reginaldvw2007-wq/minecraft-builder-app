@@ -378,7 +378,7 @@ export function HouseBuildViewer({
       </div>
 
       <div className="slice-orbit__prompt">
-        <span>Drag to spin 360</span>
+        <span>Drag to spin. Pinch to zoom.</span>
       </div>
 
       <div className="slice-orbit__canvas">
@@ -404,14 +404,19 @@ export function HouseBuildViewer({
           <OrbitControls
             ref={controlsRef}
             enablePan={false}
+            enableZoom
             enableDamping
             dampingFactor={0.08}
             rotateSpeed={0.85}
-            zoomSpeed={0.6}
+            zoomSpeed={0.78}
             minDistance={Math.max(maxSpan * 0.75, 8)}
             maxDistance={Math.max(maxSpan * 2.3, 20)}
             minPolarAngle={0.42}
             maxPolarAngle={1.46}
+            touches={{
+              ONE: THREE.TOUCH.ROTATE,
+              TWO: THREE.TOUCH.DOLLY_PAN,
+            }}
           />
 
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]}>
