@@ -946,7 +946,7 @@ function App() {
                     <div className="slice-orbit-card__toolbar">
                       <p className="section-kicker">Phone-first orbit</p>
                       <p className="slice-orbit-card__hint">
-                        Drag anywhere on the model for full 360 rotation. Step layers inside the viewer.
+                        Drag with one finger to spin. Pinch with two fingers to zoom. Step layers inside the viewer.
                       </p>
                     </div>
 
