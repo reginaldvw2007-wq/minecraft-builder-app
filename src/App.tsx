@@ -164,17 +164,22 @@ function getGuideStartingLayerIndex(layers: LayerSlice[]) {
   const bestLayer = layers
     .map((layer, index) => {
       const counts = summarizeLayerCells(layer)
+      const wallPriority = counts.wallCount > 0 ? counts.wallCount * 3.4 : -120
       const interestingMass = counts.wallCount * 2.6 + counts.highlightCount * 2 + counts.roofCount * 1.7
       const slabPenalty = counts.fillCount * 1.55
+      const roofPenalty =
+        counts.roofCount > counts.wallCount + counts.highlightCount
+          ? counts.roofCount * 1.8 + 80
+          : counts.roofCount * 0.45
       const flatPenalty = counts.emptyCount < counts.wallCount ? 20 : 0
       const distancePenalty = Math.abs(index - targetIndex) * 3
 
       return {
         index,
-        score: interestingMass - slabPenalty - flatPenalty - distancePenalty,
+        score: interestingMass + wallPriority - slabPenalty - roofPenalty - flatPenalty - distancePenalty,
       }
     })
-    .filter(({ index }) => index >= 2 && index <= layers.length - 3)
+    .filter(({ index }) => index >= 1 && index <= layers.length - 2)
     .sort((left, right) => right.score - left.score)[0]
 
   return bestLayer?.index ?? Math.min(Math.max(targetIndex, 2), layers.length - 2)
@@ -305,6 +310,7 @@ function App() {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const renderTimersRef = useRef<number[]>([])
+  const guideViewerRef = useRef<HTMLDivElement>(null)
 
   const [slotSources, setSlotSources] = useState<SlotSource[]>(createEmptySlotSources)
   const [plan, setPlan] = useState<BuildPlan>(INITIAL_PLAN)
@@ -382,6 +388,23 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (view !== 'guide' || renderState !== 'ready') {
+      return
+    }
+
+    const scrollTimer = window.setTimeout(() => {
+      guideViewerRef.current?.scrollIntoView({
+        block: 'start',
+        behavior: 'smooth',
+      })
+    }, 120)
+
+    return () => {
+      window.clearTimeout(scrollTimer)
+    }
+  }, [renderState, view])
+
   function runRender(nextSources: SourceImage[]) {
     for (const timer of renderTimersRef.current) {
       window.clearTimeout(timer)
@@ -417,6 +440,7 @@ function App() {
             '',
         )
         setRenderState('ready')
+        setView('guide')
       })
     }, 1280)
 
@@ -893,14 +917,6 @@ function App() {
               <p className="section-kicker">Step 3</p>
               <h2>Build guide</h2>
             </div>
-            <div className="secondary-actions">
-              <button type="button" className="ghost-button" onClick={exportJson}>
-                Export JSON
-              </button>
-              <button type="button" className="ghost-button" onClick={exportMarkdown}>
-                Export guide
-              </button>
-            </div>
           </div>
 
           {renderState !== 'ready' ? (
@@ -913,7 +929,7 @@ function App() {
             </div>
           ) : (
             <>
-              <div className="slice-guide-card">
+              <div ref={guideViewerRef} className="slice-guide-card">
                 <div className="slice-guide-card__header">
                   <div>
                     <p className="section-kicker">3D build viewer</p>
@@ -973,6 +989,15 @@ function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="secondary-actions">
+                <button type="button" className="ghost-button" onClick={exportJson}>
+                  Export JSON
+                </button>
+                <button type="button" className="ghost-button" onClick={exportMarkdown}>
+                  Export guide
+                </button>
               </div>
 
               <div className="guide-header-card">
